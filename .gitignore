@@ -1,0 +1,19 @@
+# Original observations and vendor products stay local.
+/GPR_raw_data/
+/data/raw/
+/data/interim/*
+/data/processed/*
+/outputs/*
+!**/.gitkeep
+/.venv/
+/.uv-cache/
+/.spikes/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+/build/
+/dist/
+.env
