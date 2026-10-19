@@ -203,7 +203,7 @@ The supplied real lines still lack reviewed assignments/CRS/plot geometry and
 velocity evidence. They may enter explicit odometer-only diagnostic scenes, with
 no geographic grid. No texture inference or extra sensor adapter was invented.
 
-## M5 — Calibrated texture inference
+## M5 — Calibrated texture inference (software implemented; field validation pending)
 
 Dependencies: M4 and enough independent, representative texture reference samples.
 
@@ -218,6 +218,36 @@ held-out data; predicted fractions are valid and close to the declared total;
 metrics have units and independent counts; report all four plot results when possible;
 interval coverage and residual maps are assessed; unsupported regions are masked.
 Sparse reference data produces a clear limitation, not fabricated model accuracy.
+
+Implemented on 2026-10-19: evidenced quantitative GPR/lab sample table, source
+contributor lineage, connected block/location/shared-support grouping, buffered
+leave-one-plot-out evaluation, isolated inner ridge tuning, training-only median
+imputation/scaling and active-feature selection, group-weighted mean comparator,
+simplex-constrained fractions and independent-group split-calibration intervals.
+JSON model and CSV estimates preserve units, lab definition, lineage, calibration,
+missingness, support/domain masks and source hashes. Too little independent support
+fails explicitly or produces null interval/error fields. Campaign shifts are flagged.
+
+Commands: `soil-sensing train --texture <lab.csv> --features <attributes.csv>
+--config configs/inference/texture_baseline.toml --output <new-run>`, then
+`soil-sensing predict --model <run>/model.json --input <supports.csv> --output <new-run>`.
+See README for PowerShell examples and the generated prediction template. The
+template config requires reviewed independent-calibration evidence before fitting.
+`requirements-modeling-win-py311.lock` pins the verified environment including
+scikit-learn 1.9.1, NumPy 2.4.6 and SciPy 1.17.1.
+
+Seven new inference regressions check constraints, trace/location/group leakage,
+held-out target isolation, training-only preprocessing, portable coefficients,
+unsupported domains, insufficient intervals and end-to-end runs. The explicit
+synthetic integration check fits 160 independent samples across four plots and
+evaluates all four outer folds (`outputs/inference-demo-model-001/`). It is a
+software fixture, not evidence of field texture accuracy. No real reference samples
+are supplied. Field calibration/transfer, additional sensor ablations and any
+texture taxonomy remain conditional on actual study data; no defaults establish
+ground truth, sensor accuracy or adequate sample size.
+
+Verification: 58 Python synthetic tests and six Node controller tests pass; Ruff
+lint/format checks pass. No private dataset is needed by the model tests.
 
 ## M6 — Field-ready reports and packaging
 

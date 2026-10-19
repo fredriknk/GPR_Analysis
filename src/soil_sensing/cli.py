@@ -72,8 +72,45 @@ def main(argv: list[str] | None = None) -> int:
     visualize = commands.add_parser("visualize", help="Build an offline 3D radar plot explorer")
     visualize.add_argument("--config", type=Path, required=True, help="Scene TOML")
     visualize.add_argument("--output", type=Path, required=True, help="New run directory")
+    train = commands.add_parser(
+        "train", help="Fit a lab-calibrated texture baseline with spatial evaluation"
+    )
+    train.add_argument(
+        "--texture", type=Path, required=True, help="Complete laboratory texture CSV"
+    )
+    train.add_argument(
+        "--features", type=Path, required=True, help="Evidenced quantitative GPR attributes"
+    )
+    train.add_argument("--config", type=Path, required=True, help="Study/model TOML")
+    train.add_argument("--output", type=Path, required=True, help="New run directory")
+    predict = commands.add_parser(
+        "predict", help="Apply a calibrated model to explicit feature supports"
+    )
+    predict.add_argument("--model", type=Path, required=True, help="Model JSON from a train run")
+    predict.add_argument(
+        "--input", type=Path, required=True, help="Feature support CSV matching model template"
+    )
+    predict.add_argument("--output", type=Path, required=True, help="New run directory")
     args = parser.parse_args(argv)
     try:
+        if args.command == "train":
+            from soil_sensing.inference.workflow import train_run
+
+            result = train_run(args.texture, args.features, args.config, args.output)
+            print(
+                f"Fitted {result['sample_count']} lab samples; "
+                f"{result['evaluated_plots']} plots evaluated"
+            )
+            return 0
+        if args.command == "predict":
+            from soil_sensing.inference.workflow import predict_run
+
+            result = predict_run(args.model, args.input, args.output)
+            print(
+                f"Estimated {result['valid_support_count']}/"
+                f"{result['support_count']} supported rows"
+            )
+            return 0
         if args.command == "visualize":
             from soil_sensing.export.scene import visualize_run
 
@@ -202,9 +239,13 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"error: missing dependency {exc.name!r}; install "
             + (
-                "soil-sensing[processing,field,visualization]"
-                if args.command == "visualize"
-                else "soil-sensing[processing]"
+                "soil-sensing[processing,field,fusion]"
+                if args.command in ("train", "predict")
+                else (
+                    "soil-sensing[processing,field,visualization]"
+                    if args.command == "visualize"
+                    else "soil-sensing[processing]"
+                )
             ),
             file=sys.stderr,
         )

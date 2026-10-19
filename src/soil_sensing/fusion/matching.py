@@ -1,5 +1,6 @@
 """Audited, support-aware matching of manual texture assays to radar attributes."""
 
+import json
 import math
 import statistics
 from datetime import datetime
@@ -66,10 +67,20 @@ def match_texture_to_gpr(
             "unit": sample.unit,
             "depth_top_m": sample.depth_top_m,
             "depth_bottom_m": sample.depth_bottom_m,
+            "x_m": sample.x_m,
+            "y_m": sample.y_m,
+            "crs": sample.crs,
+            "acquired_at_utc": sample.acquired_at_utc.isoformat(),
+            "method": sample.method,
+            "sand_silt_cutoff_um": sample.sand_silt_cutoff_um,
+            "silt_clay_cutoff_um": sample.silt_clay_cutoff_um,
+            "closure_tolerance_percent": sample.closure_tolerance_percent,
+            "target_source_sha256": sample.source_sha256,
             **{o.property: o.value for o in group},
         }
         accepted: dict[str, list[float]] = {}
         units_by_key: dict[str, str] = {}
+        lineage = {}
         for feature in features:
             if feature.get("unit") not in ("ADC counts", "mV", "V"):
                 raise ValueError("Unknown GPR amplitude feature unit")
@@ -144,6 +155,19 @@ def match_texture_to_gpr(
                     reason = "nonfinite_feature"
                 else:
                     accepted.setdefault(feature_key, []).append(value)
+                    lineage.setdefault(feature_key, []).append(
+                        {
+                            "trace_id": feature.get("trace_id"),
+                            "source_id": feature.get("source_id"),
+                            "profile_id": feature.get("profile_id"),
+                            "processing_signature": feature.get("processing_signature"),
+                            "time_basis": feature.get("time_basis"),
+                            "velocity_calibration_id": feature.get("velocity_calibration_id"),
+                            "velocity_calibration_evidence": feature.get(
+                                "velocity_calibration_evidence"
+                            ),
+                        }
+                    )
             audit.append(
                 {
                     "sample_id": sample_id,
@@ -161,5 +185,6 @@ def match_texture_to_gpr(
             row[key] = statistics.median(values)
             row[f"{key}_unit"] = units_by_key[key]
             row[f"{key}_contributors"] = len(values)
+        row["lineage"] = json.dumps(lineage, sort_keys=True, separators=(",", ":"))
         rows.append(row)
     return rows, audit

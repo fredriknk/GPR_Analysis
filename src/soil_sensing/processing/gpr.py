@@ -1,5 +1,7 @@
 """Explicit, per-trace GPR transforms. No soil-property inference is performed."""
 
+import hashlib
+import json
 from dataclasses import asdict, dataclass
 
 import numpy as np
@@ -155,6 +157,20 @@ def window_rms_features(profile: xr.Dataset, windows_ns: list[tuple[float, float
     if profile.attrs.get("clipping_can_spread_across_windows"):
         global_valid &= (profile.quality_flags.values & int(QualityFlag.ADC_LIMIT)) == 0
     rows = []
+    signature = hashlib.sha256(
+        json.dumps(
+            {
+                "algorithm": "quantitative-window-rms-v2",
+                "time_basis": time_name,
+                "processing_options": profile.attrs.get("processing_options"),
+                "amplitude_units": profile.attrs.get("amplitude_units"),
+                "antenna_frequency_mhz": profile.attrs.get("antenna_frequency_mhz"),
+                "antenna_separation_m": profile.attrs.get("antenna_separation_m"),
+                "depth_model": profile.attrs.get("depth_model"),
+            },
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
     x = profile.x_m.values
     y = profile.y_m.values
     utc = profile.time_utc.values
@@ -191,6 +207,12 @@ def window_rms_features(profile: xr.Dataset, windows_ns: list[tuple[float, float
                     "value": float(values[i]) if valid[i] else None,
                     "unit": profile.attrs["amplitude_units"],
                     "branch": "quantitative",
+                    "processing_signature": signature,
+                    "velocity_calibration_evidence": (
+                        profile.attrs["depth_model"]["calibration"]["evidence"]
+                        if "depth_model" in profile.attrs
+                        else None
+                    ),
                     "time_basis": time_name,
                     "window_start_ns": start,
                     "window_stop_ns": stop,

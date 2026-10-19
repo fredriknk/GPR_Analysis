@@ -221,6 +221,43 @@ descriptive interpolation checks, not soil-property validation.
 
 ## Predictions and run manifests
 
+M5 implements fraction models, not texture-class taxonomy. The M4 matched rows now
+include metric sample coordinates/CRS, UTC, lab method/cutoffs, closure tolerance,
+target source hash and a JSON `lineage` map from each feature to its source/root,
+profile and trace IDs, processing signature, time basis and evidenced velocity
+calibration. M3 RMS extraction supplies those signature/evidence fields. Missing
+lineage is tolerated for diagnostic matching, but rejected for model training.
+
+Model config schema `0.1` requires explicit selected gates, spatial block size,
+buffer, repeat-location tolerance, matching limits and independent-calibration
+evidence. Target fractions are converted from percent to fraction explicitly;
+measured closure is never silently normalized. Connected blocks/locations/shared
+contributors define independent spatial groups across repeated dates/depths.
+
+`model.json` schema `0.1` stores median imputation, active feature mask, scaling,
+ridge coefficients/intercepts, constrained-output algorithm ID, feature units and
+processing/calibration signatures, training domain, target lab definition, proper
+training and calibration identities/groups, tuning results, interval method/level,
+source hashes and model identity. It contains no executable pickle/joblib payload.
+The group calibration radius is the `ceil((G+1)*level)`-th ordered maximum residual;
+if this rank exceeds G, radius/intervals remain null. Bounds are componentwise
+fraction intervals, with simultaneous nominal group coverage only under the stated
+exchangeability assumption. They are not measurement uncertainty estimates.
+
+Future prediction support CSV rows carry support/plot/survey IDs, metric x/y/CRS,
+UTC, positive-down depth interval and the selected feature values, units, processing
+signatures and contributor counts. Missing features remain missing and use only
+training-fitted imputation. All-selected-features-missing, out-of-domain features,
+untrained CRS or unsupported depths mask the estimate. Acquisition-period changes
+are explicitly flagged. Estimates include fractions, interval bounds/status, domain
+distance, missingness, support validity, model ID and synthetic status. Synthetic
+model runs stay explicitly labelled; none are substituted for field calibration.
+
+Outer evaluation reports each held-out plot, sample and independent-group counts,
+supported fraction, candidate/group-mean errors in percentage points, and empirical
+joint interval coverage aggregated by independent group. Unsupported folds state
+their reason; absent supported calibration does not become an invented interval.
+
 Predictions carry estimate, units, interval bounds/level/method, valid-support mask,
 model/calibration/run IDs, depth support, acquisition period and training-domain
 distance/flag. A grid adds CRS, transform, pixel interpretation and nodata.

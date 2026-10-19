@@ -75,7 +75,8 @@ spread into the pipeline. Keep imports of optional libraries at capability
 boundaries and give actionable missing-extra errors. NMEA GPS, plot validation,
 quantitative/display processing, RMS features, reviewed picks, optional calibrated
 depth, manual texture validation and audited matching are implemented. Inference
-remains unimplemented until independent lab samples are available. See data_contracts.md.
+tools now support evidenced fraction fitting, prediction and spatial evaluation;
+field fitting remains gated by independent lab samples. See data_contracts.md.
 
 The explorer groups quantitative profiles by explicit plot/survey and namespaces
 source lines by source/profile identity. Unassigned profiles can only enter an
@@ -254,6 +255,25 @@ performance by plot/depth. Inspect residual spatial structure and applicability.
 Bootstrap independent spatial groups, not individual neighboring traces. Distinguish
 model uncertainty from measurement/calibration uncertainty. Avoid unsupported
 extrapolation; outputs include missingness and quality masks.
+
+Implemented M5 baseline: the M4 matcher supplies sample geometry, lab definitions
+and namespaced trace-contributor lineage. Connected spatial blocks, repeat locations
+and shared contributors are inseparable. Outer leave-one-plot-out folds purge
+shared groups and buffered locations. Calibration groups are reserved before inner
+GroupKFold ridge tuning; all-missing-column selection, median imputation and scaling
+fit only the proper training fold. Equal total group weights limit repeated-support
+overweighting. The comparator is the training group mean. Ridge predictions undergo
+an explicit simplex projection, preserving valid fractions without target log-ratio
+pseudocounts or relabelling observed closure failures.
+
+Intervals use independent-group split calibration with the maximum component/row
+residual per group. Insufficient finite-sample calibration ranks yield null intervals.
+Nominal coverage requires exchangeable groups; spatial autocorrelation and campaign
+shift can break that assumption. These intervals do not include lab/calibration
+measurement uncertainty. Training is limited to evidenced, harmonized GPR RMS
+features and a single laboratory method/cutoff definition. Additional sensor-family
+ablations await actual adapters/data. The portable model is versioned numerical
+JSON, with exact feature definitions, domain limits, calibration and source hashes.
 
 ## 7. Storage, provenance and scale
 

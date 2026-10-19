@@ -51,3 +51,19 @@ labels, sample support, confounders and a validation protocol before selecting a
 predictive model. A future sensor can be useful without being mandatory for the
 GPR import workflow. Evaluate added value using sensor ablations on the same
 spatially held-out soil samples, rather than assuming more channels improve accuracy.
+## M5 baseline references (2026-10-19)
+
+The implementation uses scikit-learn's maintained
+[Ridge](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Ridge.html)
+behind project-owned numerical JSON. Each proper-training/inner fold owns its
+imputer and scaler, following the library's
+[data-leakage guidance](https://scikit-learn.org/stable/common_pitfalls.html).
+Grouped splits and buffers use the project's measured support identities rather
+than random neighboring trace splits. Fraction outputs are projected explicitly
+onto the simplex; no upstream implementation was copied or vendored.
+
+Group maximum-residual split calibration uses the finite-sample rank described in
+the [Angelopoulos–Bates conformal prediction tutorial](https://arxiv.org/abs/2107.07511).
+The code states its independent/exchangeable-group assumption and returns null
+intervals when the requested rank is unavailable. Spatial/campaign shift can
+invalidate nominal coverage; these intervals are not sensor-precision estimates.

@@ -16,8 +16,9 @@ audit GPS across the test collection, optionally project coordinates when datum/
 are supplied, and process quantitative GPR traces. Runs preserve source hashes,
 trace IDs, quality flags and parameter history. Manual texture assays can be
 validated and matched to located, depth-calibrated GPR attributes with an exclusion
-audit. No production plot assignments, velocity calibration, lab texture samples or
-soil texture predictions are present.
+audit. M5 adds evidenced texture training/prediction tools with spatial evaluation;
+only synthetic model checks have been run. No production plot assignments, field
+velocity calibration, real lab texture samples or field texture predictions are present.
 GRS provisionally means gamma-ray spectrometry; confirm before implementing that adapter.
 All complementary sensor modules are optional and must accept new sensor types later.
 
@@ -187,6 +188,43 @@ texture predictions or statistical uncertainty inferred from coverage.
 The checked demo at `outputs/explorer-demo-2026-10-19/` uses 360,000 grid cells
 and 42,800 curtain vertices. See [the visualization status](docs/visualization_plan.md)
 for the build benchmark, configurable budgets and remaining acceptance work.
+
+## Laboratory-calibrated texture models
+
+Install `requirements-modeling-win-py311.lock` on Windows/Python 3.11, or resolve
+`.[processing,field,fusion,visualization,dev]` for another verified environment.
+Fill `configs/inference/texture_baseline.toml` with the reviewed study choices and
+evidence that velocity/feature calibration was independent of the target assays.
+The empty evidence field deliberately prevents unattended field fitting. Use
+complete laboratory triplets and newly processed quantitative attributes:
+
+```powershell
+.\.venv\Scripts\python.exe -m soil_sensing train --texture data/manual_texture.csv --features outputs/processed-line-001/attributes.csv --config configs/inference/texture_baseline.toml --output outputs/texture-model-001
+.\.venv\Scripts\python.exe -m soil_sensing predict --model outputs/texture-model-001/model.json --input data/prediction_supports.csv --output outputs/texture-estimates-001
+```
+
+Training reuses the audited spatial/time/depth matcher. It requires source trace
+lineage, quantitative processing signatures and velocity evidence, so old attribute
+tables without those fields must be regenerated. All samples sharing a spatial
+block, repeated location or radar contributor stay in one group. Leave-one-plot-out
+evaluation removes shared groups and a configured spatial buffer, reserves separate
+calibration groups, then fits feature selection, median imputation, scaling and
+ridge tuning only within the remaining training groups. A group-mean baseline uses
+the same supported held-out rows. Predictions are projected onto nonnegative
+sand/silt/clay fractions summing to one; observed assays are not renormalized.
+
+`model.json` stores numerical preprocessing/coefficients and provenance without
+executable serialization. `evaluation.json`, `held_out_predictions.csv`, matched
+samples and the join audit retain support/counts and per-plot errors. A generated
+`prediction_template.csv` specifies future feature supports and units/signatures.
+Unsupported feature/depth/CRS extrapolation stays missing. Group split-calibration
+intervals remain null when too few calibration groups support their declared level;
+nominal coverage relies on exchangeable groups and is not a guarantee under spatial
+or campaign shift. No soil texture model is fitted to unlabelled radar amplitude.
+
+The explicit synthetic check at `outputs/inference-demo-model-001/` uses 160
+independent fixture samples across four synthetic plots. Its scores demonstrate
+software behaviour only; they do not establish field accuracy or a sampling design.
 
 `requirements-field-win-py313.lock` pins the validated M2–M4 scientific/development
 environment and has been installed into a fresh verification environment.

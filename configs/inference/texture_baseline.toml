@@ -1,0 +1,19 @@
+# Study choices, not instrument-derived accuracy or spatial resolution.
+# Replace with reviewed design values before field fitting.
+schema_version = "0.1"
+synthetic = false
+# Required: cite independent velocity/feature calibration, separate from lab targets.
+calibration_independence_evidence = ""
+feature_names = ["gpr_rms_20_40_ns"]
+radius_m = 2.0
+max_lag_hours = 24.0
+minimum_depth_overlap = 0.25
+block_size_m = 20.0
+buffer_m = 5.0
+location_tolerance_m = 0.05
+ridge_alphas = [0.1, 1.0, 10.0]
+inner_folds = 3
+interval_level = 0.9
+calibration_fraction = 0.3
+minimum_training_groups = 3
+seed = 42
