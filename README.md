@@ -9,7 +9,9 @@ campaign covers four 100 × 100 m plots. The supplied files are development data
 not an assumed representation of those plots.
 
 **Current status:** M0–M3 tools and the manual-texture foundation of M4 are
-implemented. Import verified DT1 profiles, associate checksummed NMEA trace blocks,
+implemented. M4.5 now adds an offline four-plot radar explorer, quantitative grids
+and whole-line interpolation evaluation; browser visual/performance release review
+remains pending. Import verified DT1 profiles, associate checksummed NMEA trace blocks,
 audit GPS across the test collection, optionally project coordinates when datum/CRS
 are supplied, and process quantitative GPR traces. Runs preserve source hashes,
 trace IDs, quality flags and parameter history. Manual texture assays can be
@@ -24,7 +26,7 @@ All complementary sensor modules are optional and must accept new sensor types l
 - [Architecture](docs/architecture.md): boundaries, scientific workflow, decisions.
 - [Data contracts](docs/data_contracts.md): arrays, units, coordinates, sensor support.
 - [Implementation plan](docs/implementation_plan.md): ordered tasks and acceptance criteria.
-- [3D Plot Explorer plan](docs/visualization_plan.md): next milestone M4.5, interactive curtains, slices and supported interpolation.
+- [3D Plot Explorer](docs/visualization_plan.md): implemented M4.5 tools, commands, benchmark and release gates.
 - [Library assessment](docs/library_assessment.md): reuse decisions and primary sources.
 - [Test-data assessment](docs/test_data_assessment.md): observations and unresolved issues.
 - [Reader decision and verification](docs/dt1_reader_decision.md): GPRPy spike, timing and storage.
@@ -32,8 +34,9 @@ All complementary sensor modules are optional and must accept new sensor types l
 
 ## Run on Windows / PowerShell
 
-The core supports Python 3.11 or newer. The scientific environment is tested and
-locked for **Windows / Python 3.13**. The field lock adds pyproj to the original
+The core supports Python 3.11 or newer. The original scientific environment is
+locked for **Windows / Python 3.13**. The explorer additionally has a verified
+**Windows / Python 3.11** lock (see below). The field lock adds pyproj to the original
 processing lock for CRS validation/projection and manual sample support. From the
 project root:
 
@@ -133,6 +136,58 @@ data, no lab samples or depth calibration exist; matching yields no soil-propert
 estimate. Radius, lag and depth-overlap settings are study choices, not defaults
 implied by GPR.
 
+## Offline 3D radar explorer
+
+The deterministic demo creates four independent synthetic 100 × 100 m plots, a
+known radar event near local (65, 50) m / 38 ns in the first plot, and an explicit
+unsurveyed region. It never substitutes synthetic data for a missing field input.
+On Windows / Python 3.11, install the tested explorer environment:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-visualization-win-py311.lock
+.\.venv\Scripts\python.exe -m pip install --no-deps -e .
+.\.venv\Scripts\python.exe -m soil_sensing visualize --config configs/visualization/synthetic_demo.toml --output outputs/explorer-demo-001
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m ruff check .
+```
+
+Other supported environments can resolve `pip install -e ".[processing,field,visualization,dev]"`
+and need their own verification. Open the output's `index.html` in a WebGL-capable
+browser. Keep its `assets/` directory alongside it when copying the explorer;
+Plotly and its MIT licence are bundled locally, with no CDN, account or server.
+The viewer includes plot/session selection, shared-scale overview, signed
+quantitative curtains, RMS slices, measured/GPS-interpolated position filtering,
+support-distance overlay, cameras, slice playback and save/restore view JSON.
+Plotly's image button exports the current view. Browser visual review and the
+5 s opening / 250 ms slice targets have **not** been verified in this session.
+
+For field data, copy `configs/visualization/plot_explorer.toml`, supply existing
+located `quantitative.zarr` stores and reviewed geometry, and run the same command.
+Store and geometry paths resolve relative to that TOML. RMS is re-extracted with
+the M3 quality rules from quantitative stores; display decimation cannot change it.
+Each scene contains one explicit plot/survey. Processing settings, amplitude units,
+calibration and sample axes must be compatible. `vertical_axis="depth"` requires
+existing evidenced physical time zero and velocity calibration, with metre gates.
+`recording_time` and `corrected_time` use ns and never imply physical depth.
+
+For unassigned lines, set `diagnostic=true`, omit `plots_file`, and provide up to
+four quantitative stores. Each line is shown separately using odometer distance
+and a schematic cross-line axis; it receives no geographic grid or plot assignment.
+The current private test collection remains diagnostic.
+
+The exporter writes `scene.json`, `evaluation.json`, `run.json`, and per-scene
+`scene-01/grid.zarr` / `support.json` (no grids for diagnostic lines). Nearest and
+linear estimates share hull, polygon, full-triangle, gap and contributor-distance
+masks; unsupported cells remain missing. The support bins and every source trace
+are retained. Evaluation refits support after withholding each whole line and
+reports error **and** supported coverage. These are radar attributes, with no
+texture predictions or statistical uncertainty inferred from coverage.
+
+The checked demo at `outputs/explorer-demo-2026-10-19/` uses 360,000 grid cells
+and 42,800 curtain vertices. See [the visualization status](docs/visualization_plan.md)
+for the build benchmark, configurable budgets and remaining acceptance work.
+
 `requirements-field-win-py313.lock` pins the validated M2–M4 scientific/development
 environment and has been installed into a fresh verification environment.
 `requirements-processing-win-py313.lock` remains the M1/M3 environment without pyproj.
@@ -166,6 +221,7 @@ src/soil_sensing/
   fusion/                     Manual texture adapter and audited matching
   inference/                  Planned calibrated estimates and validation
   export/                     Raw/quantitative/display radargrams; GIS planned
+  visualization/              Validated scenes, explicit synthetic demo, offline viewer
 configs/{surveys,plots,pipelines}/  Survey, plot and processing configurations
 data/metadata/                Explicit survey assignments
 data/templates/               Empty sensor import templates

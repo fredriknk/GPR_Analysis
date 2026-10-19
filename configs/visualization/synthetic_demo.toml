@@ -1,0 +1,22 @@
+# Explicit synthetic four-plot example; never reads field files.
+schema_version = "0.1"
+synthetic = true
+vertical_axis = "recording_time"
+gates = [[0.0, 10.0], [10.0, 20.0], [20.0, 30.0], [30.0, 40.0],
+         [40.0, 50.0], [50.0, 60.0], [60.0, 70.0], [70.0, 80.0], [80.0, 90.0]]
+
+[grid]
+spacing_m = 1.0
+bin_m = 2.0
+max_distance_m = 25.0
+max_edge_m = 28.0
+method = "linear"
+max_cells = 400000
+
+[render]
+trace_step = 2
+sample_step = 2
+max_track_gap_m = 6.0
+max_curtain_vertices = 60000
+max_measured_points = 20000
+max_payload_mb = 30.0

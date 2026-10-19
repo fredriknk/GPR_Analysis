@@ -1,0 +1,36 @@
+# Example for reviewed field inputs. This deliberately cannot run unfilled.
+# Copy to a study configuration and supply quantitative located Zarr stores.
+schema_version = "0.1"
+synthetic = false
+vertical_axis = "recording_time"
+profiles = []
+plots_file = "../plots/four_plots.toml"
+gates = [[0.0, 20.0], [20.0, 50.0], [50.0, 90.0]]
+
+# For an unassigned line review, set diagnostic=true, supply one or more stores,
+# and omit plots_file. Diagnostic lines receive no geographic grid or plot assignment.
+# For depth, use vertical_axis="depth" and metre gates, with calibrated stores.
+
+[grid]
+spacing_m = 2.0
+bin_m = 2.0
+max_distance_m = 10.0
+max_edge_m = 15.0
+method = "linear"
+max_cells = 400000
+
+[render]
+trace_step = 4
+sample_step = 2
+max_track_gap_m = 2.0
+max_curtain_vertices = 150000
+max_measured_points = 100000
+max_payload_mb = 30.0
+
+# Optional world-coordinate masks must be documented, e.g.:
+# [[exclusions]]
+# plot_id = "plot_01"
+# polygon = [[500040,6600030],[500060,6600030],[500060,6600070],[500040,6600070]]
+# evidence = "reviewed unsurveyed region"
+# [[regions]] restricts the footprint to the union of its polygons, using the
+# same fields. Triangles must lie wholly inside that footprint minus exclusions.

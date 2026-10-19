@@ -1,8 +1,10 @@
 # M4.5 — Interactive 3D Plot Explorer
 
-Status: planned, next implementation priority. This intermediate milestone follows
-the existing M2/M3 data pipeline and precedes M5 texture modelling. It does not
-depend on receiving EMI, GRS or laboratory data. Those become optional layers later.
+Status: core implementation and synthetic scientific/controller checks complete;
+browser visual review and interaction performance are pending release gates.
+This intermediate milestone follows M2/M3 and precedes M5 texture modelling. It
+does not depend on receiving EMI, GRS or laboratory data. Those remain future
+optional layers; no sample markers or extra sensor layers have been implemented.
 
 ## Experience to build
 
@@ -60,9 +62,13 @@ If measured browser performance blocks volume/section interaction, benchmark
 [PyVista](https://docs.pyvista.org/user-guide/plotting.html) with
 [trame](https://docs.pyvista.org/api/plotting/trame.html) against the same scene
 contract before adding a server-backed viewer. It is a fallback, not a second MVP.
-During implementation, verify Plotly's Windows/Python compatibility and licence,
-add a `visualization` extra, and lock the tested environment. No new dependency is
-installed by this plan.
+The `visualization` extra now contains Plotly and Shapely. Plotly 7.1.0 (bundled
+plotly.js 4.1.1) and Shapely 2.2.0 were installed on Windows/Python 3.11.4;
+`requirements-visualization-win-py311.lock` pins the tested scientific/dev environment.
+Plotly's [MIT licence](https://github.com/plotly/plotly.py/blob/main/LICENSE.txt) is
+copied into offline assets; Shapely uses
+[BSD-3-Clause](https://github.com/shapely/shapely/blob/main/LICENSE.txt). The browser
+renderer itself has not yet been visually reviewed on this machine.
 
 ## Geometry and honest vertical axes
 
@@ -126,7 +132,7 @@ prediction. M5 will provide separately named calibrated texture layers later.
 
 ## Package and product contract
 
-Proposed additions (not implemented APIs):
+Implemented package boundaries:
 
 | Location | Responsibility |
 |---|---|
@@ -144,12 +150,14 @@ origin, plot/session IDs, processing/calibration hashes and source contributor
 references. Store quantitative grids in Zarr, separate from decimated scene arrays.
 Extend `docs/data_contracts.md` when implementing the validators.
 
-Proposed CLI: `soil-sensing visualize --config <scene.toml> --output <new-run>`.
+Implemented CLI: `soil-sensing visualize --config <scene.toml> --output <new-run>`.
 The configuration references processed stores and reviewed geometry; the command
 builds grids and an offline explorer without modifying inputs. Output includes
-`index.html`, local assets, `grid.zarr`, `scene.json`, interpolation evaluation and
-`run.json`. Keep no-overwrite and source/artifact-hash conventions. Provide a
-separate explicit synthetic demo configuration, never a hidden field-data fallback.
+`index.html`, local assets, `scene-01/grid.zarr` and `support.json` for each
+geographic scene, `scene.json`, `evaluation.json` and `run.json`. Diagnostic
+odometer scenes have no grids. No-overwrite and source/artifact hashes are enforced.
+`configs/visualization/synthetic_demo.toml` is the explicit synthetic entry point;
+`plot_explorer.toml` is an intentionally unfilled field configuration example.
 
 Use a configurable grid with a 1 m synthetic preview as the initial demonstration,
 not a claim of 1 m field resolution. A 100 × 100 cell grid with 40 gates is about
@@ -215,3 +223,73 @@ interpolation. M5 still owns soil texture inference and predictive uncertainty.
 M6 reuses these scenes in field reports and GIS exports. A survey-planning editor,
 cloud service, live acquisition dashboard and full 3D geophysical inversion are
 outside this intermediate milestone.
+
+## Implemented behaviour and limitations (2026-10-19)
+
+The offline directory embeds all scene arrays in HTML and bundles Plotly locally;
+there is no fetch, CDN, cloud account or scientific browser processing. The viewer
+has plot/session selection, an overview of up to four independent local frames,
+curtains, measured RMS points, interpolated slices, a distance overlay, camera
+presets, playback, vertical display factor and view JSON save/restore. Plotly's
+image-export button is present; image export and visual layout remain unverified.
+The first plot's synthetic packet is centred near (65,50) m / 38 ns; the default
+gate contains it. Subsequent plots shift that event by 4 ns per plot.
+
+Field scenes require existing quantitative stores and reviewed assignments and
+geometry. RMS is re-extracted through the M3 function rather than trusting an
+unverified external feature table. Depth gates select existing calibrated samples,
+retain calibration/uncertainty, and never silently resample. Recording/corrected
+time gates are explicitly distinguished. Elevations remain in parent stores; this
+release renders an assumed flat relative ground plane. Optional observation/pick
+layers, a volume preview and topographic correction remain deferred.
+
+Nearest/linear use per-line mean support bins; exact coincident bins combine
+original contributors by their mean. Missing/rejected positions and invalid
+windows are excluded. Whole-triangle containment in the polygon/region union
+minus exclusions prevents bridges over holes and disconnected regions. Both
+methods share hull, longest-edge and maximum vertex-distance masks. Missing
+positions split curtains before display decimation. Small gaps without explicit
+exclusions are governed by those spatial limits; no measured antenna footprint
+or GPS accuracy is assumed. Validation refits bins/triangles after withholding
+whole lines, and unsupported folds have null errors.
+
+The default field budget allows 10 million input amplitude samples, 100,000
+trace-gate observations, 150,000 curtain vertices and 30 MiB of data-plus-Plotly
+payload. Input sizes are checked using Zarr metadata before loading field arrays.
+The grid cell budget applies across scenes. The demo tightens these to 400,000
+cells, 60,000 vertices and 20,000 observations. Display sampling never affects
+scientific grids; over-budget runs fail and retain a failed manifest.
+
+Reproduce a backend benchmark in a new output directory:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/benchmark_explorer.py --config configs/visualization/synthetic_demo.toml --output outputs/explorer-bench-001 --report outputs/explorer-bench-001.json
+node --test tests/viewer.test.cjs
+```
+
+The benchmark reports process peak working set and build wall time, including
+import-independent scene generation, gridding, holdouts, Zarr write/reopen and
+HTML packaging. Browser open and slice timings stay null until measured. The
+recorded setup is Windows build 26200, Python 3.11.4, Intel64 Family 6 Model 85,
+20 logical CPUs, using the visualization lock. Detailed CPU model queries were
+unavailable. The reference run has four 100 × 100 m scenes, 36 lines, 9 gates,
+360,000 grid values and 42,800 decimated curtain vertices. See
+`outputs/explorer-demo-benchmark-2026-10-19.json` for measured build/memory/payload
+numbers: 32.9 s build time, 320.3 MiB peak process working set and 20.3 MiB of
+data-plus-Plotly payload. These do not establish browser performance.
+
+Across its 324 whole-line/gate folds, 11,124 of 14,904 valid held-out observations
+are supported (74.6%). Pooled descriptive errors are linear MAE 1.471 / RMSE 5.601
+and nearest MAE 3.330 / RMSE 13.166 synthetic ADC counts. These numbers describe
+only this deterministic demonstration; adjacent-line correlation and hand-chosen
+synthetic structure limit any inference beyond the fixture.
+
+Acceptance evidence: 51 Python synthetic tests pass after installation from the
+lock in a fresh environment, including after installation of the built wheel;
+six Node controller tests cover masking geometry,
+slice/plot/camera controls, shared scales, GPS-position filtering, support units
+and diagnostic empty states. Ruff lint/format checks pass, and a wheel includes
+the HTML/JS assets. Browser automation rejects local `file://` pages in this
+session. Consequently checkpoints a/d still require actual browser screenshots,
+rotation/zoom, keyboard use, image/view export and the 5 s / 250 ms interaction
+benchmark. No browser timing or screenshot has been substituted with a mock.

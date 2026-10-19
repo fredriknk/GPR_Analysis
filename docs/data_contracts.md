@@ -2,7 +2,8 @@
 
 The raw RadarProfile schema `0.2`, survey configuration and assignment CSV are
 validated by code. M2/M3 extend the same profile with optional located and derived
-fields; M4 validates manual texture observations and audited joins. Predictions
+fields; M4 validates manual texture observations and audited joins. M4.5 validates
+attribute-grid schema `0.1`, scene inputs and offline manifests. Predictions
 remain specifications for later milestones. Inventory JSON remains schema `0.1`; it contains `summary`, `files`,
 `profiles`, and `orphan_sidecars`. Its raw fields retain vendor units. Null survey
 and plot IDs are intentional. Production validators will reject unresolved metadata
@@ -146,6 +147,77 @@ attributes and contributor counts, plus per-candidate inclusion/exclusion reason
 distance, time lag and depth overlap. It requires matching plot/CRS and explicit
 radius/lag/depth tolerances; uncalibrated GPR windows cannot satisfy depth support.
 It does not fit or evaluate a texture model.
+
+## Attribute grids and scenes (M4.5, schema 0.1)
+
+Each geographic scene belongs to exactly one reviewed `plot_id` / `survey_id`,
+with a projected metric CRS and a two-element world origin. Its x/y coordinates
+are local metre offsets from that origin. Explicit plot assignment evidence and
+reviewer are required. Separate source roots are namespaced by `source_id` and
+`profile_id`; repeated line or trace identities fail. Related scenes share a
+quantitative processing signature and attribute unit before a shared-scale overview
+is permitted. Scenes never silently resample mismatched time/depth axes.
+
+`vertical_axis` is `recording_time`, `corrected_time` or `depth`. Gates are ordered,
+nonoverlapping `[start, stop)` intervals in ns or positive-down metres. Corrected
+time needs physical time-zero evidence; depth also needs the existing calibrated
+depth model and its uncertainty. Gate RMS uses exactly the selected quantitative
+samples with the M3 signal/clipping rules. A calibrated gate still represents an
+approximate radar support, not an exact soil sampling volume. Flat relative ground
+is explicitly labelled; measured elevation/topographic rendering is not implemented.
+
+Per-scene `grid.zarr` is an xarray Dataset with these fields:
+
+| Field | Dimensions | Meaning |
+|---|---|---|
+| `value` | `(gate,y,x)` | Linear or nearest quantitative RMS, original amplitude unit |
+| `nearest_value` | `(gate,y,x)` | Nearest baseline under the identical support mask |
+| `valid_support` | `(gate,y,x)` bool | Exactly the finite value/baseline mask |
+| `nearest_distance_m` | `(gate,y,x)` | Distance to nearest aggregated support; may be finite outside valid support |
+| `contributor_count` | `(gate,y,x)` int | Number of raw contributing traces; zero outside support |
+| `support_index` | `(gate,y,x,vertex)` int | Up to three per-gate support-bin references; `-1` is absent |
+| `nearest_support_index` | `(gate,y,x)` int | Per-gate nearest baseline reference; `-1` outside support |
+| `gate_start`, `gate_stop` | `(gate,)` | Explicit gate bounds in `gate_unit` |
+| `x`, `y` | `(x,)`, `(y,)` | Increasing local cell-centre offsets in metres |
+
+Required attrs include schema, CRS/origin, plot/survey, gate unit and vertical axis,
+attribute unit, method, processing signature, source profiles and calibration.
+Produced grids also retain all grid parameters, footprint GeoJSON, geometry
+evidence and run input hashes. `support_reference="support.json"` resolves next
+to the store. That JSON contains per-gate bins with mean position/value, trace
+counts, original trace/line IDs and measured/interpolated position statuses.
+Bins use the configured local metre lattice independently within each line;
+exact duplicate bin locations are combined by the mean of their original rows.
+Centroids outside the valid domain are discarded conservatively.
+
+No gridding extrapolates beyond the convex hull. The complete Delaunay triangle
+must be inside the plot/region union minus exclusions, its longest edge must meet
+`max_edge_m`, and every vertex must meet `max_distance_m` from the query. These
+limits refer to aggregated support positions. Collinear/sparse support yields
+missing surfaces, including for the nearest baseline. Grid masks/distances/counts
+describe support, not calibrated precision or predictive uncertainty. Explicit
+exclusion/region polygons retain evidence in the resolved run configuration.
+
+`scene.json` stores renderer-independent metadata, source checksums/history,
+parent-store hashes, quality summaries and references to grids/support files.
+Decimated curtain arrays and gate observations are embedded in `index.html`;
+nonfinite values become JSON `null`. Decimation is only for measured rendering,
+never for grid fitting. Source trace hover retains identity and quality/position
+status; depth curtains also retain sampled standard uncertainty. `view.json`
+exports camera, scene identity, plot/gate, layer flags, scale limits and vertical
+display factor, and can be restored only into the matching scene.
+
+Explicit `diagnostic=true` scenes use odometer x and schematic cross-line y,
+preserve missing geographic metadata, and have no CRS or geographic grid.
+Explicit `synthetic=true` scenes use the versioned deterministic generator, with
+synthetic evidence/units and a visible demo badge. These modes cannot borrow field
+geometry implicitly. Extra sensors and soil predictions are not synthesized.
+
+`evaluation.json` records each whole held-out line, training line count, held-out
+and supported counts/fraction, and candidate/baseline MAE, RMSE and bias in the
+attribute unit. Unsupported folds have null errors. Binning and triangulation
+are fitted again in every fold, with no held-out contributors. Metrics are
+descriptive interpolation checks, not soil-property validation.
 
 ## Predictions and run manifests
 

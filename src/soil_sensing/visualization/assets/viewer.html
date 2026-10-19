@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Soil sensing · Plot Explorer</title><style>
+:root{color-scheme:dark;--bg:#0c141d;--panel:#131f2b;--line:#2b3b4b;--muted:#a4b6c7;
+--accent:#75e3c2}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#edf4fa;
+font:14px/1.5 system-ui,sans-serif}header{padding:20px 28px;border-bottom:1px solid var(--line);
+display:flex;justify-content:space-between;align-items:center;gap:16px}h1{font-size:23px;
+letter-spacing:-.6px;margin:0}header p{margin:3px 0;color:var(--muted)}.badge{font-size:12px;
+color:var(--accent);border:1px solid #467c70;border-radius:5px;padding:5px 10px;white-space:nowrap}
+main{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:calc(100vh - 105px)}
+aside{background:var(--panel);padding:22px;border-right:1px solid var(--line)}
+label{display:block;margin:12px 0 5px}select,button,input[type=number]{background:#1c2c3c;
+color:#edf4fa;border:1px solid #40566b;border-radius:5px;padding:8px;font:inherit}
+select{width:100%}button{cursor:pointer}button:hover{border-color:var(--accent)}
+input[type=range]{width:100%;accent-color:var(--accent)}input[type=checkbox]{accent-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.row{display:flex;gap:7px;
+margin:12px 0}.row button{flex:1;font-size:12px}.small{color:var(--muted);font-size:12px}
+fieldset{border:0;border-top:1px solid var(--line);padding:12px 0;margin:20px 0}
+legend{padding-right:10px;color:var(--muted)}fieldset label{margin:7px 0}
+article{min-width:0;display:flex;flex-direction:column}.toolbar{padding:14px 24px;
+border-bottom:1px solid var(--line);display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+#interval{font-weight:650;color:var(--accent)}#plot{height:calc(100vh - 240px);min-height:490px}
+.status{padding:14px 24px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+#empty{padding:0 24px;color:#ffc885}.note{border-left:2px solid #53687c;padding-left:10px}
+a{color:var(--accent)}@media(max-width:800px){main{grid-template-columns:1fr}aside{border-right:0;
+display:grid;grid-template-columns:1fr 1fr;gap:15px}#plot{height:650px}header{padding:16px}}
+</style><script src="assets/plotly.min.js"></script></head><body>
+<header><div><h1>Plot Explorer</h1><p>Soil sensing / radar observations & spatial support</p></div>
+<span id="badge" class="badge"></span></header><main><aside><div>
+<label for="plotSelect">Plot / acquisition session</label><select id="plotSelect"></select>
+<label for="mode">Comparison</label><select id="mode"><option value="single">Selected plot</option>
+<option value="overview">Four-plot overview · shared scale</option></select>
+<label for="slice">Time / depth gate</label><input id="slice" type="range" min="0" value="0" step="1">
+<div class="row"><button id="play">Play slices</button><button id="save">Save view</button></div>
+<label for="restore">Restore view JSON</label><input id="restore" type="file" accept=".json">
+<label for="samples">Position support</label><select id="samples"><option value="all">Measured + GPS interpolated</option>
+<option value="measured">Measured GPS positions only</option></select>
+<label for="exaggeration">Vertical display factor</label><input id="exaggeration" type="number"
+min="0.1" max="5" step="0.1" value="1"><p class="small">Display aspect only; no time-to-depth conversion.</p>
+</div><div><fieldset><legend>Visible layers</legend>
+<label><input id="boundary" type="checkbox" checked> Plot boundary / flat ground</label>
+<label><input id="tracks" type="checkbox" checked> Survey tracks</label>
+<label><input id="curtains" type="checkbox" checked> Quantitative radar curtains</label>
+<label><input id="measured" type="checkbox"> Measured RMS at gate</label>
+<label><input id="interpolated" type="checkbox" checked> Interpolated RMS slice</label>
+<label><input id="coverage" type="checkbox"> Support distance overlay</label>
+</fieldset><div class="row"><button id="top">Top</button><button id="oblique">Oblique</button>
+<button id="side">Side</button></div><button id="reset">Reset camera</button>
+<p class="small note">Recording time in ns is a radar coordinate. Attributes are not soil texture.
+Coverage distance and counts are diagnostics, not uncertainty intervals.</p>
+<p class="small"><a href="scene.json">Scene & provenance</a> · <a href="evaluation.json">Line holdouts</a>
+· <a href="run.json">Run manifest</a></p></div></aside><article>
+<div class="toolbar"><span id="interval" aria-live="polite"></span><span id="metric"></span>
+<span id="timing" class="small"></span></div><div id="plot"></div>
+<div id="empty" role="status"></div><div class="status" id="status"></div>
+</article></main><script type="application/json" id="scene-data">__SCENES__</script>
+<script src="assets/viewer.js"></script></body></html>

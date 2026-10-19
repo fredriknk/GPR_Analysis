@@ -1,7 +1,9 @@
 # Architecture
 
 Current implementation: M0–M3 tooling and the manual-texture foundation of M4 are
-complete. See
+complete. M4.5 scene construction, support-masked interpolation and offline export
+are implemented; browser visual review and interaction benchmarks remain release
+gates. See
 [reader decision](dt1_reader_decision.md) for verified backend/timing behavior and
 [implementation plan](implementation_plan.md) for remaining stages. Sections below
 describe the full intended workflow; calibrated field fusion, inference and GIS
@@ -22,8 +24,10 @@ be useful intermediate/context variables; they are not substitutes for texture
 reference measurements. GRS is provisionally gamma-ray spectrometry and unconfirmed.
 
 Use a modular Python package with a CLI and versioned configuration files.
-The next intermediate milestone is the [M4.5 3D Plot Explorer](visualization_plan.md):
-an offline Plotly viewer over validated scenes and SciPy-interpolated attribute grids.
+The [M4.5 3D Plot Explorer](visualization_plan.md) provides an offline Plotly viewer
+over validated scenes and SciPy-interpolated attribute grids. Shapely enforces whole
+triangle containment in the documented footprint, including holes and disconnected
+regions; it is isolated behind the optional visualization boundary.
 Keep scientific calculations in Python and viewing controls in the presentation layer.
 Avoid services or a database server until measured requirements justify them.
 A notebook can explore the same public functions. No LLM is needed at runtime.
@@ -63,7 +67,7 @@ flowchart TD
 | `fusion` | Spatial/temporal/depth support, join diagnostics | Sensor features + samples → training/prediction tables | GeoPandas, pandas |
 | `inference` | Calibration, prediction, uncertainty, fold isolation | Tables → model artifacts, estimates and evaluations | scikit-learn; EMagPy optional EMI inversion |
 | `export` | Radargrams, plot summaries, GIS rasters and tables | Validated products → figures/GeoPackage/GeoTIFF/Parquet | Matplotlib, rasterio, GeoPandas |
-| `visualization` (M4.5 planned) | Scene contracts, curtains, slices and interactive controls | Located profiles + supported grids → offline 3D explorer | Plotly |
+| `visualization` | Scene contracts, curtains, slices and interactive controls | Located profiles + supported grids → offline 3D explorer | Plotly |
 | CLI/orchestration | Configuration, run directories, logs, dependency ordering | Config + manifest → reproducible run | Standard library initially |
 
 Adapters return project-owned objects; third-party GUI/session objects must not
@@ -72,6 +76,30 @@ boundaries and give actionable missing-extra errors. NMEA GPS, plot validation,
 quantitative/display processing, RMS features, reviewed picks, optional calibrated
 depth, manual texture validation and audited matching are implemented. Inference
 remains unimplemented until independent lab samples are available. See data_contracts.md.
+
+The explorer groups quantitative profiles by explicit plot/survey and namespaces
+source lines by source/profile identity. Unassigned profiles can only enter an
+explicit diagnostic odometer scene. Compatible quantitative profiles supply RMS
+gates through the existing M3 extractor. Vertical samples are selected without
+resampling, and incompatible axes or calibration are rejected. Geometry is rendered
+in local metric offsets with the world origin/CRS preserved. The current release
+uses an explicitly flat relative ground plane; topographic correction is pending.
+
+Gridding bins observations within each line and gate, then interpolates with a
+Delaunay triangulation. Both the linear candidate and nearest baseline use the same
+support domain, complete-triangle, edge-length and contributor-distance masks.
+Explicit exclusions/regions prevent bridging unsurveyed areas. Missing trace
+positions split measured curtains before display decimation. Short unmarked gaps
+are governed by the declared spatial limits; no antenna footprint is invented.
+Whole-line evaluation repeats binning and triangulation using training lines only.
+Distance/count overlays are support diagnostics, never confidence intervals.
+
+HTML embeds the scene arrays and uses only adjacent local assets. No scientific
+operation runs in JavaScript. Quantitative grids remain separate, losslessly
+reopened Zarr products with source references and coverage masks. Run manifests
+hash inputs, renderer assets and grids. Metadata preflight limits input sample,
+measurement and curtain counts before field amplitudes are loaded; further grid
+and payload budgets fail explicitly. No volume renderer or server is required.
 
 ### Adding another sensor later
 

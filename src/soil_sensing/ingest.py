@@ -35,7 +35,7 @@ def tree_hash(root: Path) -> str:
 def code_hash() -> str:
     digest = hashlib.sha256()
     root = Path(__file__).parent
-    for path in sorted(root.rglob("*.py")):
+    for path in sorted(p for p in root.rglob("*") if p.suffix in (".py", ".html", ".js")):
         digest.update(path.relative_to(root).as_posix().encode())
         digest.update(bytes.fromhex(sha256_file(path)))
     return digest.hexdigest()

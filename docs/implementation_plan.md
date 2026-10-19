@@ -134,7 +134,7 @@ Synthetic adapter, validation, exclusion and repeatability tests pass. No real
 texture assays or secondary sensor files are supplied, so field joins and a
 specific EMI/GRS adapter remain pending. GRS meaning is still unconfirmed.
 
-## M4.5 — Interactive 3D Plot Explorer (planned; next priority)
+## M4.5 — Interactive 3D Plot Explorer (core implemented; browser release review pending)
 
 Dependencies: M2/M3 for field scenes; synthetic fixtures allow immediate development.
 M4 observation layers are optional. This intermediate milestone comes before M5.
@@ -157,6 +157,51 @@ grids retain units, sources, calibration and support diagnostics; held-out-line
 evaluation reports error and supported coverage; rendering meets documented budgets.
 See [the detailed visualization implementation plan](visualization_plan.md) for
 UX, package boundaries, interpolation rules, artifacts and checkpoint criteria.
+
+Implemented on 2026-10-19: deterministic synthetic four-plot scenes, typed scene/grid
+contracts, quantitative located-profile integration, explicit recording/corrected
+time and calibration-gated depth modes, gap-preserving curtains, RMS slices,
+whole-line evaluation, support-masked nearest/linear interpolation and offline
+Plotly packaging. Four-plot overview uses compatible units/processing and shared
+limits. Viewer controls include cameras, layers, position support, slice playback,
+vertical aspect and save/restore views. Input metadata preflight, grid/render/payload
+budgets, checksums, failed-run markers and lossless grid reopen checks are enforced.
+
+Checkpoint status: **a)** prototype code and controller contracts implemented;
+actual browser screenshot/interaction review pending. **b)** profile integration
+and metric/depth synthetic tests implemented; optional M4 sample markers deferred.
+**c)** implemented and tested on constant/linear fields, holes, disconnected regions,
+long triangles, invalid windows and whole-line holdouts. Field spacing/mask tuning
+needs real acquisition geometry. **d)** overview, offline assets, wheel packaging,
+Windows/Python 3.11 lock and backend benchmark implemented; browser performance,
+image export and keyboard/WebGL visual review remain release gates. M4.5 is not
+marked fully accepted until those gates pass. Volume preview is deferred.
+
+Run the demo and checks using the visualization lock:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-visualization-win-py311.lock
+.\.venv\Scripts\python.exe -m pip install --no-deps -e .
+.\.venv\Scripts\python.exe -m soil_sensing visualize --config configs/visualization/synthetic_demo.toml --output outputs/explorer-001
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m ruff format --check .
+node --test tests/viewer.test.cjs
+```
+
+The Node tests use only its built-in test runner and exercise precomputed controller
+traces; Node is not a scientific runtime dependency. Verification from a fresh
+lock-installed environment passes 51 Python tests, including from the built wheel;
+six controller tests and Ruff also pass. The wheel includes viewer assets. The local demo is
+`outputs/explorer-demo-2026-10-19/index.html`; its benchmark report is
+`outputs/explorer-demo-benchmark-2026-10-19.json`. Browser automation rejected
+`file://` navigation, so screenshots, WebGL behaviour and opening/slice timing were
+not measured. Do not claim the 5 s / 250 ms targets as achieved.
+
+The supplied real lines still lack reviewed assignments/CRS/plot geometry and
+velocity evidence. They may enter explicit odometer-only diagnostic scenes, with
+no geographic grid. No texture inference or extra sensor adapter was invented.
 
 ## M5 — Calibrated texture inference
 
@@ -189,7 +234,7 @@ the first; reports distinguish observations from inference; a full-scale line-by
 benchmark documents memory/runtime. Reuse the M4.5 viewer in reports; consider a
 broader application or distributed compute only when measured needs justify it.
 
-Validation on 2026-10-19: 35 synthetic tests pass, Ruff lint/format checks pass,
+Earlier M2–M4 validation on 2026-10-19: 35 synthetic tests passed, Ruff checks passed,
 two representative GPS lines and one GPR line were run locally, and all 80 lines
 were GPS-audited. `requirements-field-win-py313.lock` pins NumPy 2.5.4, SciPy
 1.18.1, xarray 2026.9.0, Zarr 3.4.1, pynmea2 1.19.0, pyproj 3.8.0 and

@@ -69,8 +69,19 @@ def main(argv: list[str] | None = None) -> int:
     match.add_argument("--max-lag-hours", type=float, required=True)
     match.add_argument("--minimum-depth-overlap", type=float, default=0.25)
     match.add_argument("--output", type=Path, required=True, help="New run directory")
+    visualize = commands.add_parser("visualize", help="Build an offline 3D radar plot explorer")
+    visualize.add_argument("--config", type=Path, required=True, help="Scene TOML")
+    visualize.add_argument("--output", type=Path, required=True, help="New run directory")
     args = parser.parse_args(argv)
     try:
+        if args.command == "visualize":
+            from soil_sensing.export.scene import visualize_run
+
+            result = visualize_run(
+                args.config, args.output, progress=lambda s: print(s, flush=True)
+            )
+            print(f"Built {result['scene_count']} scenes: {args.output.resolve() / 'index.html'}")
+            return 0
         if args.command == "ingest":
             from soil_sensing.config import SurveyConfig, load_config
             from soil_sensing.ingest import ingest_collection
@@ -189,7 +200,12 @@ def main(argv: list[str] | None = None) -> int:
         )
     except ModuleNotFoundError as exc:
         print(
-            f"error: missing dependency {exc.name!r}; install soil-sensing[processing]",
+            f"error: missing dependency {exc.name!r}; install "
+            + (
+                "soil-sensing[processing,field,visualization]"
+                if args.command == "visualize"
+                else "soil-sensing[processing]"
+            ),
             file=sys.stderr,
         )
         return 2
