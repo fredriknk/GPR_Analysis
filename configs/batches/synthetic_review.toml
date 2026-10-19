@@ -1,0 +1,37 @@
+# Small, explicit four-plot example. Paths resolve relative to this file.
+schema_version = "0.1"
+
+[[jobs]]
+job_id = "plots"
+operation = "visualize"
+config = "../visualization/synthetic_demo.toml"
+
+[[jobs]]
+job_id = "gis_plot_01"
+operation = "export-grid"
+input = "@plots/scene-01/grid.zarr"
+depends_on = ["plots"]
+
+[[jobs]]
+job_id = "gis_plot_02"
+operation = "export-grid"
+input = "@plots/scene-02/grid.zarr"
+depends_on = ["plots"]
+
+[[jobs]]
+job_id = "gis_plot_03"
+operation = "export-grid"
+input = "@plots/scene-03/grid.zarr"
+depends_on = ["plots"]
+
+[[jobs]]
+job_id = "gis_plot_04"
+operation = "export-grid"
+input = "@plots/scene-04/grid.zarr"
+depends_on = ["plots"]
+
+[[jobs]]
+job_id = "review"
+operation = "report"
+runs = ["@plots", "@gis_plot_01", "@gis_plot_02", "@gis_plot_03", "@gis_plot_04"]
+depends_on = ["plots", "gis_plot_01", "gis_plot_02", "gis_plot_03", "gis_plot_04"]

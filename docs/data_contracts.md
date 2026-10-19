@@ -266,3 +266,40 @@ Separate inferred properties from measured sensor attributes in filenames and me
 Run manifests include input hashes, resolved configuration, exact environment,
 code version, parameters, seed, provenance DAG, artifact paths/hashes, QA counts,
 and completion status. Version contracts and provide migrations when they change.
+
+## GIS, reports and batches (M6)
+
+GeoTIFF attribute exports retain the grid's metric projected CRS and world origin.
+The affine transform describes north-up cell areas; stored increasing-y grid rows
+are reversed explicitly. Each band carries gate start/stop/unit, and dataset tags
+carry attribute units, vertical-axis meaning, synthetic status and metadata reference.
+Float64 attribute/baseline/distance/count rasters preserve values exactly; missing
+attributes are NaN. `valid_support.tif` uses 0/1 and reserves 255 for nodata.
+Zero contributor count remains a valid diagnostic value for unsupported cells.
+`grid_metadata.json` and `support.json` retain processing/calibration, sources and
+trace/bin contributors. Grid spacing is a product setting, not sensor resolution.
+
+`coverage.gpkg` stores the configured domain and per-gate supported-cell polygons;
+the latter also have GeoParquet output when nonempty. An empty supported domain
+does not become an invented polygon. Texture GeoPackage/GeoParquet products contain
+point supports, positive-down depth bounds, model identity, lab definition reference,
+fractions, interval bounds/status and domain/missingness flags. Different CRSs use
+separate files. Unsupported estimates remain missing. Exports reopen raster/vector
+products to verify values, geometry, CRS and transforms; no silent reprojection occurs.
+
+Reports accept complete runs only and verify their declared artifact checksums
+before copying them, rejecting escaping paths and symbolic links. The report
+copies the artifacts and parent manifest, links bundled explorers/evaluation,
+and plots held-out residuals in percentage points. Its own run records parent
+hashes and a default 200 MiB input bundle budget. Synthetic status stays visible;
+radar attributes are distinguished from laboratory-calibrated inference. A report
+is a portable artifact bundle, not a claim that missing field evidence exists.
+
+Batch TOML schema `0.1` contains unique `jobs` with `job_id`, `operation`, optional
+`depends_on`, and operation-specific input paths. Relative paths resolve from the
+TOML. `@job/path` references must name a completed declared dependency and stay
+within that run. Cycles/unknown jobs fail. Cache fingerprints include resolved
+input content, referenced scene geometry/profiles, configuration, code and exact
+environment. Each cache execution gets a new directory; only complete, matching,
+hash-verified runs are reused. A corrupt completed entry fails instead of silently
+being trusted. Batch manifests record jobs, paths, cache keys and reuse status.

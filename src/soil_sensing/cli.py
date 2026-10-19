@@ -91,8 +91,74 @@ def main(argv: list[str] | None = None) -> int:
         "--input", type=Path, required=True, help="Feature support CSV matching model template"
     )
     predict.add_argument("--output", type=Path, required=True, help="New run directory")
+    export = commands.add_parser("export", help="Export validated products to GIS")
+    export.add_argument("--kind", choices=("grid", "predictions"), required=True)
+    export.add_argument("--input", type=Path, required=True)
+    export.add_argument(
+        "--reference", type=Path, help="Required model reference for texture estimates"
+    )
+    export.add_argument("--output", type=Path, required=True)
+    report = commands.add_parser("report", help="Bundle verified completed runs and residual maps")
+    report.add_argument("--run", type=Path, action="append", required=True)
+    report.add_argument("--output", type=Path, required=True)
+    batch = commands.add_parser(
+        "batch", help="Run an explicit dependency graph with optional verified cache"
+    )
+    batch.add_argument("--config", type=Path, required=True)
+    batch.add_argument("--output", type=Path, required=True)
+    batch.add_argument("--cache", type=Path)
+    demo = commands.add_parser(
+        "demo", help="Generate a complete explicitly synthetic review release"
+    )
+    demo.add_argument("--output", type=Path, required=True)
+    preview = commands.add_parser(
+        "preview", help="Read-only loopback preview of a verified synthetic explorer"
+    )
+    preview.add_argument("--run", type=Path, required=True)
+    preview.add_argument("--port", type=int, default=0)
+    preview.add_argument("--duration-seconds", type=int, default=600)
     args = parser.parse_args(argv)
     try:
+        if args.command == "preview":
+            from soil_sensing.visualization.preview import preview_run
+
+            preview_run(args.run, port=args.port, duration_seconds=args.duration_seconds)
+            return 0
+        if args.command == "demo":
+            from soil_sensing.demo import demo_run
+
+            result = demo_run(args.output, progress=lambda s: print(s, flush=True))
+            print(f"Synthetic report: {args.output.resolve() / result['report']}")
+            return 0
+        if args.command == "batch":
+            from soil_sensing.batch import batch_run
+
+            result = batch_run(
+                args.config, args.output, cache=args.cache, progress=lambda s: print(s, flush=True)
+            )
+            print(f"Completed {result['completed_jobs']} jobs; reused {result['reused_jobs']}")
+            return 0
+        if args.command == "report":
+            from soil_sensing.export.report import report_run
+
+            report_run(args.run, args.output)
+            print(f"Report: {args.output.resolve() / 'index.html'}")
+            return 0
+        if args.command == "export":
+            from soil_sensing.export.gis import export_grid_run, export_predictions_run
+
+            if args.kind == "grid":
+                if args.reference:
+                    raise ValueError("Grid export does not take --reference")
+                export_grid_run(args.input, args.output)
+            else:
+                if not args.reference:
+                    raise ValueError(
+                        "Texture export requires --reference with model/lab definition"
+                    )
+                export_predictions_run(args.input, args.reference, args.output)
+            print(f"GIS export: {args.output.resolve()}")
+            return 0
         if args.command == "train":
             from soil_sensing.inference.workflow import train_run
 
@@ -242,8 +308,8 @@ def main(argv: list[str] | None = None) -> int:
                 "soil-sensing[processing,field,fusion]"
                 if args.command in ("train", "predict")
                 else (
-                    "soil-sensing[processing,field,visualization]"
-                    if args.command == "visualize"
+                    "soil-sensing[processing,field,visualization,fusion,geo]"
+                    if args.command in ("visualize", "export", "report", "batch", "demo")
                     else "soil-sensing[processing]"
                 )
             ),

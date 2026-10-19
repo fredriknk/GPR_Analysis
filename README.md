@@ -17,7 +17,9 @@ are supplied, and process quantitative GPR traces. Runs preserve source hashes,
 trace IDs, quality flags and parameter history. Manual texture assays can be
 validated and matched to located, depth-calibrated GPR attributes with an exclusion
 audit. M5 adds evidenced texture training/prediction tools with spatial evaluation;
-only synthetic model checks have been run. No production plot assignments, field
+only synthetic model checks have been run. M6 adds verified GIS exports, portable
+HTML reports, dependency-aware batches, a full synthetic demo and Windows/Linux CI.
+No production plot assignments, field
 velocity calibration, real lab texture samples or field texture predictions are present.
 GRS provisionally means gamma-ray spectrometry; confirm before implementing that adapter.
 All complementary sensor modules are optional and must accept new sensor types later.
@@ -244,6 +246,43 @@ python -m unittest discover -s tests -v
 The `processing` extra enables ingestion, NMEA parsing and signal processing; the
 small `field` extra adds pyproj. Heavier `geo`, `fusion` and `notebooks` extras remain
 optional. GPRPy is an independent compatibility reference, not a runtime requirement.
+
+## Reports, GIS and reproducible releases
+
+Install `requirements-full-win-py311.lock` in a fresh Python 3.11 environment,
+then install this package with `pip install --no-deps -e .`. The lock includes the
+scientific, modelling, visualization, GIS and development extras. Other platforms
+can resolve `pip install -e ".[processing,field,fusion,visualization,geo,dev]"`;
+the synthetic CI matrix exercises Windows and Linux separately.
+
+```powershell
+.\.venv\Scripts\python.exe -m soil_sensing demo --output outputs/synthetic-release-001
+.\.venv\Scripts\python.exe -m soil_sensing export --kind grid --input outputs/explorer-001/scene-01/grid.zarr --output outputs/gis-plot-01
+.\.venv\Scripts\python.exe -m soil_sensing export --kind predictions --input outputs/texture-estimates-001/texture_estimates.csv --reference outputs/texture-estimates-001/model_reference.json --output outputs/gis-texture-001
+.\.venv\Scripts\python.exe -m soil_sensing report --run outputs/explorer-001 --run outputs/texture-model-001 --run outputs/gis-plot-01 --output outputs/report-001
+.\.venv\Scripts\python.exe -m soil_sensing batch --config configs/batches/synthetic_review.toml --output outputs/batch-001 --cache outputs/batch-cache
+.\.venv\Scripts\python.exe -m soil_sensing batch --config configs/batches/synthetic_review.toml --output outputs/batch-002 --cache outputs/batch-cache
+```
+
+Use new output directories. `demo` generates explicitly synthetic inputs, trains
+and evaluates the model, builds four radar scenes, exports GIS products and bundles
+a portable `report/index.html` with held-out residual maps. It uses no private files.
+The model's demonstration predictions reuse fixture supports and are labelled
+synthetic; accuracy assessment comes from the separate held-out predictions.
+
+GIS exports retain native metric CRS, world cell centres, gate units/calibration,
+nodata/support masks and source references. Radar grids become GeoTIFFs; coverage
+and texture support points become GeoPackage/GeoParquet. No texture raster or
+interpolation of texture estimates is implied by the point export. Reports copy
+verified artifacts into a self-contained folder, including the explorer's assets.
+
+Batch jobs declare dependencies and reference artifacts as `@job_id/path`.
+Cached results are reused only when source/configuration hashes, package code,
+environment and verified completed outputs agree. Failed or incomplete runs are
+never reused; corrupt completed cache entries fail visibly. Copy a generated
+report folder for sharing; a cached batch manifest itself references its local cache.
+See [release verification](docs/release_verification.md) for commands, measurements
+and field limitations.
 
 ## Layout
 

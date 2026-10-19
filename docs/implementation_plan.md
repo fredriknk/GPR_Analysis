@@ -252,7 +252,7 @@ ground truth, sensor accuracy or adequate sample size.
 Verification: 58 Python synthetic tests and six Node controller tests pass; Ruff
 lint/format checks pass. No private dataset is needed by the model tests.
 
-## M6 — Field-ready reports and packaging
+## M6 — Field-ready reports and packaging (implemented; field deployment conditional)
 
 Dependencies: M3 for radar reports; M4.5 for interactive scenes; M5 for texture products.
 
@@ -271,7 +271,37 @@ Earlier M2–M4 validation on 2026-10-19: 35 synthetic tests passed, Ruff checks
 two representative GPS lines and one GPR line were run locally, and all 80 lines
 were GPS-audited. `requirements-field-win-py313.lock` pins NumPy 2.5.4, SciPy
 1.18.1, xarray 2026.9.0, Zarr 3.4.1, pynmea2 1.19.0, pyproj 3.8.0 and
-Matplotlib 3.11.2. GIS rasters, full plot products and cross-platform CI are M6.
+Matplotlib 3.11.2.
+
+Implemented on 2026-10-20: north-up GeoTIFF attributes/baselines/support diagnostics,
+coverage GeoPackage/GeoParquet, texture support-point vectors with fractions and
+intervals, lossless reopen checks, portable verified HTML reports with residual
+maps and the offline explorer, sequential dependency batches and verified caching.
+`demo` runs the explicitly synthetic model/scene/GIS/report workflow without private
+files. A Windows/Python 3.11 full lock and Windows/Linux synthetic CI are included.
+The synthetic-only loopback preview enables actual browser QA under the browser's
+file-URL restriction. No cloud service is part of the scientific pipeline.
+
+Commands and exact release evidence are in [release_verification.md](release_verification.md)
+and README. A fresh lock-installed environment and wheel reproduced the complete
+demo. Synthetic tests cover GIS CRS/centres/nodata/gate units, masks, calibrated
+depth metadata, report integrity, cache reuse/invalidation, failed runs, path
+confinement and synthetic preview restrictions. Full CI execution is checked after
+the milestone push; its result is recorded in the release verification document.
+
+The full-size sequential DC/RMS benchmark processed 808,404 traces / 202,101,000
+samples over 404 synthetic lines in 131.0 s with 163.5 MiB peak process working
+set. It generated one line at a time and excluded DT1/GPS/Zarr I/O; it is not a
+complete field-ingestion throughput claim. No distributed processing is needed
+on the evidence from this benchmark.
+
+The software milestones are implemented for the available contracts. Field gates
+remain explicit: reviewed CRS/control/plot assignments, physical time-zero and
+velocity evidence, laboratory texture references, actual secondary-sensor files
+and the meaning of GRS. Vendor-image/field-parameter review and field transfer
+accuracy require those inputs. Optional extra sensor/pick/volume/topographic layers
+and PDF reports are deferred; the delivered report is portable HTML. Missing
+evidence was not replaced with synthetic production data.
 
 ## Field metadata to collect
 

@@ -26,7 +26,22 @@ def begin_run(operation, output, inputs, *, configuration=None):
         raise ValueError("Run output must be separate from its inputs")
     hashes = {str(p): input_hash(p) for p in inputs}
     versions = {}
-    for name in ("numpy", "scipy", "scikit-learn", "xarray", "zarr", "pyproj", "rasterio"):
+    for name in (
+        "numpy",
+        "scipy",
+        "scikit-learn",
+        "xarray",
+        "zarr",
+        "pyproj",
+        "rasterio",
+        "geopandas",
+        "pyogrio",
+        "pyarrow",
+        "plotly",
+        "shapely",
+        "matplotlib",
+        "pynmea2",
+    ):
         try:
             versions[name] = version(name)
         except PackageNotFoundError:

@@ -9,6 +9,17 @@ overview uses full-resolution plan maps; selected plots use 3D curtains/slices. 
 describe the full intended workflow; calibrated field fusion, inference and GIS
 products still require field metadata/data.
 
+M5 implements evidenced calibration, spatial evaluation and portable numerical
+models. M6 wraps completed runs in GIS exports and portable reports. `runs.py`
+records immutable inputs, code/environment identity and artifact hashes;
+`batch.py` resolves an explicit dependency DAG and reuses only verified completed
+results with matching source/configuration/code/environment fingerprints.
+`export/gis.py` isolates Rasterio/GeoPandas adapters and checks reopened products.
+`export/report.py` bundles declared artifacts and renders held-out residual maps.
+`demo.py` composes these public functions using explicit synthetic inputs. The
+optional `visualization/preview.py` is a read-only, synthetic-only loopback viewer;
+it is not a scientific processing service or a requirement for exported HTML.
+
 ## Goal and scope
 
 Build a local, reproducible scientific pipeline for four 100 × 100 m plots.

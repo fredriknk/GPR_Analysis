@@ -295,6 +295,7 @@ def predict_run(model_path, input_csv, output):
                 "target_definition": model["target_definition"],
                 "interval": model["interval"],
                 "processing_definitions": model["feature_definitions"],
+                "synthetic": model.get("synthetic", False),
             },
         )
         manifest.update(
