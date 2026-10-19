@@ -2,8 +2,8 @@
 
 Current implementation: M0–M3 tooling and the manual-texture foundation of M4 are
 complete. M4.5 scene construction, support-masked interpolation and offline export
-are implemented; browser visual review and interaction benchmarks remain release
-gates. See
+are implemented and reviewed in a synthetic WebGL browser session. The comparison
+overview uses full-resolution plan maps; selected plots use 3D curtains/slices. See
 [reader decision](dt1_reader_decision.md) for verified backend/timing behavior and
 [implementation plan](implementation_plan.md) for remaining stages. Sections below
 describe the full intended workflow; calibrated field fusion, inference and GIS

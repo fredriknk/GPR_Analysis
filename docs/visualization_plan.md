@@ -1,7 +1,7 @@
 # M4.5 — Interactive 3D Plot Explorer
 
-Status: core implementation and synthetic scientific/controller checks complete;
-browser visual review and interaction performance are pending release gates.
+Status: implementation, synthetic scientific/controller checks and browser review
+complete. Production acceptance remains conditional on field metadata/calibration.
 This intermediate milestone follows M2/M3 and precedes M5 texture modelling. It
 does not depend on receiving EMI, GRS or laboratory data. Those remain future
 optional layers; no sample markers or extra sensor layers have been implemented.
@@ -68,7 +68,7 @@ plotly.js 4.1.1) and Shapely 2.2.0 were installed on Windows/Python 3.11.4;
 Plotly's [MIT licence](https://github.com/plotly/plotly.py/blob/main/LICENSE.txt) is
 copied into offline assets; Shapely uses
 [BSD-3-Clause](https://github.com/shapely/shapely/blob/main/LICENSE.txt). The browser
-renderer itself has not yet been visually reviewed on this machine.
+renderer was reviewed on this machine on 2026-10-20.
 
 ## Geometry and honest vertical axes
 
@@ -231,7 +231,7 @@ there is no fetch, CDN, cloud account or scientific browser processing. The view
 has plot/session selection, an overview of up to four independent local frames,
 curtains, measured RMS points, interpolated slices, a distance overlay, camera
 presets, playback, vertical display factor and view JSON save/restore. Plotly's
-image-export button is present; image export and visual layout remain unverified.
+image-export button exports PNGs. The actual browser review is recorded below.
 The first plot's synthetic packet is centred near (65,50) m / 38 ns; the default
 gate contains it. Subsequent plots shift that event by 4 ns per plot.
 
@@ -284,12 +284,43 @@ and nearest MAE 3.330 / RMSE 13.166 synthetic ADC counts. These numbers describe
 only this deterministic demonstration; adjacent-line correlation and hand-chosen
 synthetic structure limit any inference beyond the fixture.
 
-Acceptance evidence: 51 Python synthetic tests pass after installation from the
-lock in a fresh environment, including after installation of the built wheel;
-six Node controller tests cover masking geometry,
-slice/plot/camera controls, shared scales, GPS-position filtering, support units
-and diagnostic empty states. Ruff lint/format checks pass, and a wheel includes
-the HTML/JS assets. Browser automation rejects local `file://` pages in this
-session. Consequently checkpoints a/d still require actual browser screenshots,
-rotation/zoom, keyboard use, image/view export and the 5 s / 250 ms interaction
-benchmark. No browser timing or screenshot has been substituted with a mock.
+Acceptance evidence: the original 51 Python visualization/core tests passed after
+installation from the lock and built wheel. Seven Node controller tests now cover
+masking geometry, slice/plot/camera controls, shared plan-map scales, position
+filtering, support units, diagnostic empty states and combined-curtain gaps.
+Ruff checks pass. Browser evidence below supplements those controller tests.
+
+## Browser release review (2026-10-20)
+
+The browser cannot navigate file URLs through automation. The optional `preview`
+command serves only checksummed synthetic explorer assets from memory, read-only,
+on 127.0.0.1 with an automatic timeout and outbound connections blocked by CSP.
+It refuses field scenes, undeclared assets and traversal; ordinary exported HTML
+still bundles all assets and does not require a server.
+
+```powershell
+.\.venv\Scripts\python.exe -m soil_sensing preview --run outputs/explorer-release-2026-10-20-v3 --duration-seconds 600
+```
+
+The final full-resolution demo retains 360,000 quantitative grid values and 42,800
+curtain vertices. Compatible curtains/tracks share WebGL objects with explicit
+null separators; slice changes update only the moving data. WebGL uses one pixel
+per CSS pixel; PNG export remains at scale 2. Four independent plan maps provide
+the comparison overview. Four concurrent 3D scenes were measured at 350–435 ms
+per slice and were replaced by plan maps to meet the interaction target without
+discarding quantitative grid detail. Select a plot for 3D rotation and cameras.
+
+Browser: Chromium 155.0.0.0 on Windows 26200, 1280 × 720 viewport, the same
+20-logical-CPU development machine as the backend benchmark. Measured opening was
+2.8–3.0 s; five selected-plot updates took 138–246 ms, and the plan overview update
+took 81–130 ms. These are local performance observations, not hardware-independent
+guarantees. Startup includes HTML/script loading through the first completed
+Plotly render; updates include controller work and the Plotly render promise.
+Browser process memory and input-to-photon latency were not instrumented.
+
+The review checks keyboard gate navigation, all plot selections, shared scales,
+known event location, explicit unsupported holes, measured-position filtering,
+distance units, cameras, playback, saved view/restore and PNG export. Screenshots
+and DOM-reported timings are retained under `outputs/browser-review-2026-10-20/`.
+The sidebar scrolls independently so lower controls keep the plot visible. Cloud
+sharing is removed from the modebar. Private field data was not served.

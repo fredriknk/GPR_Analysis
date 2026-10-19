@@ -10,8 +10,8 @@ not an assumed representation of those plots.
 
 **Current status:** M0–M3 tools and the manual-texture foundation of M4 are
 implemented. M4.5 now adds an offline four-plot radar explorer, quantitative grids
-and whole-line interpolation evaluation; browser visual/performance release review
-remains pending. Import verified DT1 profiles, associate checksummed NMEA trace blocks,
+and whole-line interpolation evaluation, with synthetic browser review and measured
+interaction budgets. Import verified DT1 profiles, associate checksummed NMEA trace blocks,
 audit GPS across the test collection, optionally project coordinates when datum/CRS
 are supplied, and process quantitative GPR traces. Runs preserve source hashes,
 trace IDs, quality flags and parameter history. Manual texture assays can be
@@ -160,8 +160,9 @@ Plotly and its MIT licence are bundled locally, with no CDN, account or server.
 The viewer includes plot/session selection, shared-scale overview, signed
 quantitative curtains, RMS slices, measured/GPS-interpolated position filtering,
 support-distance overlay, cameras, slice playback and save/restore view JSON.
-Plotly's image button exports the current view. Browser visual review and the
-5 s opening / 250 ms slice targets have **not** been verified in this session.
+Plotly's image button exports the current view. The comparison overview uses four
+full-resolution plan maps; select a plot for 3D rotation. Synthetic browser review
+and measured opening/slice performance are recorded in the visualization plan.
 
 For field data, copy `configs/visualization/plot_explorer.toml`, supply existing
 located `quantitative.zarr` stores and reviewed geometry, and run the same command.

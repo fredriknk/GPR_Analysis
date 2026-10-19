@@ -134,7 +134,7 @@ Synthetic adapter, validation, exclusion and repeatability tests pass. No real
 texture assays or secondary sensor files are supplied, so field joins and a
 specific EMI/GRS adapter remain pending. GRS meaning is still unconfirmed.
 
-## M4.5 — Interactive 3D Plot Explorer (core implemented; browser release review pending)
+## M4.5 — Interactive 3D Plot Explorer (implemented; synthetic browser review complete)
 
 Dependencies: M2/M3 for field scenes; synthetic fixtures allow immediate development.
 M4 observation layers are optional. This intermediate milestone comes before M5.
@@ -167,15 +167,16 @@ limits. Viewer controls include cameras, layers, position support, slice playbac
 vertical aspect and save/restore views. Input metadata preflight, grid/render/payload
 budgets, checksums, failed-run markers and lossless grid reopen checks are enforced.
 
-Checkpoint status: **a)** prototype code and controller contracts implemented;
-actual browser screenshot/interaction review pending. **b)** profile integration
+Checkpoint status: **a)** prototype and actual WebGL browser review implemented.
+**b)** profile integration
 and metric/depth synthetic tests implemented; optional M4 sample markers deferred.
 **c)** implemented and tested on constant/linear fields, holes, disconnected regions,
 long triangles, invalid windows and whole-line holdouts. Field spacing/mask tuning
 needs real acquisition geometry. **d)** overview, offline assets, wheel packaging,
-Windows/Python 3.11 lock and backend benchmark implemented; browser performance,
-image export and keyboard/WebGL visual review remain release gates. M4.5 is not
-marked fully accepted until those gates pass. Volume preview is deferred.
+Windows/Python 3.11 lock, backend benchmark and browser review implemented.
+The comparison overview uses four full-resolution plan maps with shared scales;
+the selected plot retains rotatable 3D curtains and slices. This measured rendering
+choice avoids four expensive concurrent WebGL scenes. Volume preview is deferred.
 
 Run the demo and checks using the visualization lock:
 
@@ -192,12 +193,14 @@ node --test tests/viewer.test.cjs
 
 The Node tests use only its built-in test runner and exercise precomputed controller
 traces; Node is not a scientific runtime dependency. Verification from a fresh
-lock-installed environment passes 51 Python tests, including from the built wheel;
-six controller tests and Ruff also pass. The wheel includes viewer assets. The local demo is
-`outputs/explorer-demo-2026-10-19/index.html`; its benchmark report is
-`outputs/explorer-demo-benchmark-2026-10-19.json`. Browser automation rejected
-`file://` navigation, so screenshots, WebGL behaviour and opening/slice timing were
-not measured. Do not claim the 5 s / 250 ms targets as achieved.
+lock-installed environment originally passed 51 Python tests, including from the built wheel.
+The wheel includes viewer assets. Browser review on 2026-10-20 uses a read-only,
+synthetic-only loopback preview because browser automation does not allow file URLs.
+No scientific network service or external asset fetch is required. The full demo
+is `outputs/explorer-release-2026-10-20-v3/index.html`; see the visualization plan
+for measured opening/slice timings, screenshots and interaction evidence. Seven
+Node controller tests now include combined-curtain gap/identity checks and plan
+overview masks. These controller tests supplement actual browser review.
 
 The supplied real lines still lack reviewed assignments/CRS/plot geometry and
 velocity evidence. They may enter explicit odometer-only diagnostic scenes, with

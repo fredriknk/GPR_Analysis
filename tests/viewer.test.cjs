@@ -29,7 +29,7 @@ async function setup(data=payload()) {
   const controls = new Map(), renders=[];
   function element(id) {
     if (!controls.has(id)) controls.set(id,{value:'',checked:false,textContent:'',
-      options:[{},{}],handlers:{},append(){},on(){},click(){},
+      options:[{},{}],handlers:{},dataset:{},append(){},on(){},click(){},
       addEventListener(name,fn){this.handlers[name]=fn;}});
     return controls.get(id);
   }
@@ -39,7 +39,15 @@ async function setup(data=payload()) {
   element('exaggeration').value='1';
   const context={document:{getElementById:element,createElement:()=>({click(){}})},window:{},
     performance:{now:()=>0},setInterval:()=>1,clearInterval(){},Blob,URL,
-    Plotly:{react:async (el,traces,layout)=>{renders.push({traces,layout});}}};
+    Plotly:{react:async (el,traces,layout,config)=>{renders.push({traces,layout,config,method:'react'});},
+      restyle:async (el,updates,indices)=>{
+        const previous=renders.at(-1), traces=structuredClone(previous.traces);
+        indices.forEach((index,j)=>Object.entries(updates).forEach(([key,values])=>{
+          if(key==='marker.color')traces[index].marker.color=values[j];
+          else traces[index][key]=values[j];
+        }));
+        renders.push({...previous,traces,method:'restyle'});
+      }}};
   vm.runInNewContext(controller,context);
   await new Promise(resolve=>setImmediate(resolve));
   return {controls,renders,change:async(id,value,event='change')=>{
@@ -62,6 +70,9 @@ test('unsupported cells and invalid amplitudes remove geometry, not just color',
 test('slice, plot and camera controls update arrays and explicit units',async()=>{
   const s=await setup();
   await s.change('slice','1','input');
+  assert.equal(s.renders.at(-1).method,'restyle');
+  assert.deepEqual(Array.from(s.renders[0].config.modeBarButtonsToRemove),['sendChartToCloud']);
+  assert.equal(JSON.parse(s.controls.get('timing').dataset.benchmark).renders.length,2);
   assert.match(s.controls.get('interval').textContent,/5 – 10 ns/);
   const slice=s.renders.at(-1).traces.find(t=>t.type==='surface'&&t.colorscale==='Viridis');
   assert.equal(slice.z[0][0],-7.5);
@@ -69,18 +80,24 @@ test('slice, plot and camera controls update arrays and explicit units',async()=
   await s.change('plotSelect','3');
   await s.click('top');
   assert.equal(s.renders.at(-1).layout.scene.camera.eye.z,2.6);
+  assert.equal(s.renders.at(-1).layout.scene.uirevision,1);
   await s.click('reset');
   assert.equal(s.renders.at(-1).layout.scene.camera.eye.z,1.2);
+  assert.equal(s.renders.at(-1).layout.scene.uirevision,2);
 });
 
 test('overview renders independent frames with a shared quantitative scale',async()=>{
   const s=await setup();await s.change('mode','overview');
   const result=s.renders.at(-1);
   assert.equal(result.layout.annotations.length,4);
-  const surfaces=result.traces.filter(t=>t.type==='surface');
+  const surfaces=result.traces.filter(t=>t.type==='heatmap');
   assert.equal(surfaces.length,4);
-  assert.ok(surfaces.every(t=>t.cmax===3&&t.cmin===0));
-  assert.equal(new Set(surfaces.map(t=>t.scene)).size,4);
+  assert.ok(surfaces.every(t=>t.zmax===3&&t.zmin===0));
+  assert.equal(new Set(surfaces.map(t=>t.xaxis)).size,4);
+  assert.equal(surfaces[0].z[0][1],null);
+  assert.ok(s.controls.get('top').disabled);
+  await s.change('slice','1','input');
+  assert.equal(s.renders.at(-1).traces.find(t=>t.type==='heatmap').z[1][0],null);
 });
 
 test('position toggle masks GPS-interpolated curtains without recomputing grids',async()=>{
@@ -106,4 +123,19 @@ test('diagnostic review never enables a geographic overview',async()=>{
   const s=await setup(data);
   assert.ok(s.controls.get('mode').options[1].disabled);
   assert.match(s.controls.get('empty').textContent,/reviewed plot geometry/);
+});
+
+test('combined curtains and tracks keep explicit gaps and trace identity',async()=>{
+  const data=payload();
+  data.scenes[0].curtains.push(structuredClone(data.scenes[0].curtains[0]));
+  const s=await setup(data), traces=s.renders.at(-1).traces;
+  const curtains=traces.filter(t=>t.meta?.layer==='curtain');
+  assert.equal(curtains.length,1);
+  assert.equal(curtains[0].z[1][2],null);
+  assert.equal(curtains[0].x[1][2],null);
+  assert.equal(curtains[0].customdata[1][3][0],'source/a:1');
+  const tracks=traces.filter(t=>t.meta?.layer==='tracks');
+  assert.equal(tracks.length,1);
+  assert.equal(tracks[0].x[2],null);
+  assert.equal(tracks[0].customdata[3],'source/a:1');
 });
