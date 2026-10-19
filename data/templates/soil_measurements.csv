@@ -1,0 +1,1 @@
+measurement_id,sample_id,plot_id,survey_id,acquired_at_utc,x,y,crs,horizontal_uncertainty_m,depth_top_m,depth_bottom_m,property,value,unit,method,sand_silt_cutoff_um,silt_clay_cutoff_um,closure_tolerance_percent,uncertainty,uncertainty_kind,lab_batch_id,quality_flag

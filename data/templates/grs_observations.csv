@@ -1,0 +1,1 @@
+measurement_id,plot_id,survey_id,acquired_at_utc,x,y,crs,horizontal_uncertainty_m,instrument,spectrum_path,live_time_s,real_time_s,sensor_height_m,footprint_radius_m,k_percent,eu_ppm,eth_ppm,calibration_id,quality_flag

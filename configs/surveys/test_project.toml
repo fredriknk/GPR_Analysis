@@ -1,0 +1,8 @@
+# Validated by `soil-sensing ingest --config ...`; paths are relative to this file.
+schema_version = "0.1"
+project_id = "test_project"
+raw_root = "../../GPR_raw_data" # Relative to this configuration file.
+manifest_csv = "../../data/metadata/survey_assignment.csv"
+assignment_status = "unreviewed"
+# Multiple dates and locations occur inside these directories. Do not assign by folder.
+# No source CRS, vertical datum, velocity, or production plot is assumed here.

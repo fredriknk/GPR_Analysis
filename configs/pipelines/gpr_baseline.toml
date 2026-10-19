@@ -1,0 +1,10 @@
+# Executable conservative baseline. Cutoffs and time zero require field review.
+schema_version = "0.2"
+pipeline_id = "gpr_baseline"
+remove_dc = true
+# Optional: dewow_window_ns = 20.0
+# Optional: bandpass_low_mhz = 50.0 and bandpass_high_mhz = 400.0
+# Optional: reviewed_time_zero_ns = 3.2 and time_zero_evidence = "field calibration ID"
+bandpass_order = 4
+display_agc_window_ns = 20.0
+attribute_windows_ns = [[0.0, 20.0], [20.0, 50.0], [50.0, 90.0]]

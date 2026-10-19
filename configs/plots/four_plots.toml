@@ -1,0 +1,27 @@
+# Design specification for M2+. Geometry and CRS must come from the field survey.
+schema_version = "0.1"
+project_id = "four_plots"
+
+[[plots]]
+plot_id = "plot_01"
+width_m = 100.0
+length_m = 100.0
+geometry_status = "not_supplied"
+
+[[plots]]
+plot_id = "plot_02"
+width_m = 100.0
+length_m = 100.0
+geometry_status = "not_supplied"
+
+[[plots]]
+plot_id = "plot_03"
+width_m = 100.0
+length_m = 100.0
+geometry_status = "not_supplied"
+
+[[plots]]
+plot_id = "plot_04"
+width_m = 100.0
+length_m = 100.0
+geometry_status = "not_supplied"

@@ -1,0 +1,205 @@
+# Implementation plan
+
+Deliver working, reviewable milestones in dependency order. Soil texture is the primary
+target. EMI, GRS and other future measurements remain optional; no final sensor list
+has been selected. Each milestone updates this file, records dependency versions,
+and includes a runnable example with explicit limitations.
+
+## M0 — Scaffold and inventory (implemented)
+
+- Standard `src/` package, CLI, optional dependency groups, architecture and templates.
+- HD metadata reader; deterministic path-based inventory; DT1 size/endpoint checks;
+  optional SHA-256 of DT1/HD/GPS; missing companions and mixed-date warnings.
+- No writes to sources; refuse output overwrite; synthetic regression tests.
+- Local test collection is inventoried separately from the four production plots.
+
+Verified on 2026-10-19: editable installation in `.venv` on Python 3.13.12;
+11 synthetic tests pass; Ruff lint and formatting checks pass; all supplied TOML
+files parse. Local inventory reports 80 profiles / 66,774 traces and hashes 241
+DT1/HD/GPS files. All size/endpoint checks pass, with one orphan GPS file and
+multiple acquisition dates reported. GPS quality and scientific backends are not
+yet validated. `requirements-dev.lock` pins the installed development tools.
+
+## M1 — Verified DT1 ingestion (implemented)
+
+Dependencies: M0. Complete the GPRPy spike in library_assessment.md first.
+
+Implement a source adapter and RadarProfile contract, typed configuration validation,
+explicit assignment ingestion, per-trace metadata and provenance. Read a single
+profile into xarray and persist/reopen it. Keep unresolved geographic positions null.
+Inspect field timing rather than choosing `window / N` or `window / (N-1)` by guesswork.
+
+Acceptance: exact integer amplitudes match synthetic fixtures and independently
+checked raw records; every trace/count/dtype is validated; array orientation is
+tested; invalid/truncated data fail; source checksums remain unchanged; sample
+interval and time-zero conventions are documented with evidence. One raw radargram
+shows axes/units and flags and renders correctly. Resolve and commit an environment
+lock for the chosen backend; document any Windows/Python compatibility limits.
+
+Implementation: strict NumPy DT1 adapter, validated xarray schema 0.2, lossless Zarr
+format-2 storage, single/subset/batch ingestion CLI, assignment/config validation,
+raw radargrams and HTML review, source/environment/artifact provenance and failed-run
+tracking. GPRPy 1.0.14 was evaluated on all 80 supplied profiles before selection;
+see [reader decision](dt1_reader_decision.md). All 24 synthetic tests pass, including
+malformed interior records and full storage round trips, in a fresh environment
+installed from `requirements-processing-win-py313.lock`.
+
+Timing: raw recording spacing follows the documented window/N reference convention
+(0.4 ns here); fractional HD and per-trace zero metadata are retained. Physical
+time-zero indexing remains unresolved because the reference readers disagree. Raw
+plots explicitly show uncorrected recording time; resolving physical zero is a gate
+for M3 correction/depth products, not an invented default at ingestion.
+
+Local review: `outputs/raw_import_verified_2026-10-19/index.html` and `run.json`.
+All 80 profiles are imported with no assumed plot coordinates. Geographic timestamps
+and positions remain missing until M2.
+
+## M2 — GPS and plot geometry (implemented; field control pending)
+
+Dependencies: M1 (GPS parsing experiments can happen earlier).
+
+Implement NMEA trace-block association, checksum/quality handling, UTC dates,
+bounded interpolation, odometer comparisons, CRS transforms and optional lever-arm
+correction. Add plot polygon config validation and a coverage/quality report. Review
+explicit assignments for this mixed test folder. Allow time-domain diagnostics for
+unassigned lines but exclude them from production plot products.
+
+Acceptance: synthetic checksum failures, empty constellation positions, midnight,
+duplicate markers, reversed lines, gaps and missing endpoints are tested; no
+interpolation crosses configured gaps or sessions; coordinates agree with independent
+control within stated uncertainty; unknown CRS/geometry prevents geospatial export.
+All four eventual plots can have separate configs without duplicated pipeline code.
+
+Implemented: checksummed multi-GNSS trace blocks, UTC, fix metadata, conservative
+interpolation, odometer comparison, explicit pyproj CRS transforms and antenna
+offsets, reviewed plot-polygon validation and `locate`/`gps-audit`/`coverage` CLI.
+The full local audit `outputs/gps_audit_release_2026-10-19.json` parsed all 80 lines:
+65,971 measured positions, 9 interpolated, 758 missing and 36 rejected among 66,774
+traces. No checksum failures or duplicate markers were found. Thirty-four invalid
+fix blocks in `Data09line/Lines/LINE04` and two outliers in `LINE05` were rejected;
+`Data09line/Lines/LINE02` has 540
+missing traces kept as gaps. Synthetic known-control, midnight, checksum,
+duplicate, gap and reversed-line tests pass. Field datum, control, plot polygons,
+antenna offsets and assignments are absent, so projected field accuracy and
+four-plot coverage remain unverified. The supplied lines remain unassigned.
+
+## M3 — Reproducible GPR processing and attributes (core implemented; review pending)
+
+Dependencies: M1; M2 for located products.
+
+Implement pure transforms, quantitative/display branches, parameterized time-zero,
+dewow/DC and bandpass, masks, provenance, and raw-versus-processed plots. Produce a
+small set of time-window attributes and a reviewed reflector-pick format. Add
+optional calibrated depth conversion only when velocity evidence is available.
+
+Acceptance: known synthetic events preserve expected timing/amplitude within stated
+tolerances; invalid filter settings fail; branch identity prevents gained amplitudes
+from being used as quantitative input; masks survive processing; uniform/finite-offset
+depth examples and uncertainty are checked. Compare vendor images qualitatively;
+numerical parity requires documented original processing settings. No unsupported
+soil-property prediction is emitted.
+
+Implemented: per-trace DC removal excluding ADC-limit samples, optional dewow and
+zero-phase bandpass, evidence-gated time-zero, quantitative/display separation,
+window-local clipping masks, RMS attributes, reviewed reflector-pick CSV and
+finite-offset homogeneous depth with velocity evidence and uncertainty. The
+`process` CLI writes Zarr, attribute CSV and raw/quantitative/display plots.
+Synthetic passband/stopband, timing, branch and depth tests pass. On a 700-trace
+test line, three windows produced 2,100 rows, with 799 excluded by clipping/signal
+flags (`outputs/process_line00_release_2026-10-19/`). No field
+time-zero or velocity evidence is supplied; the baseline remains recording-time
+only. Vendor-image review and field processing parameter selection remain pending.
+
+## M4 — Extensible measurement ingestion and fusion (manual foundation implemented)
+
+Dependencies: M2 and initial M3 features; real reference files when available.
+
+Implement generic observation/unit/support validators and manual texture sample
+ingestion first. Add a registry and one additional sensor adapter based on the actual
+next supplied dataset. EMI/GRS schemas are provisional examples, not obligations.
+Preserve spectra/profiles separately from summary features. Create explicit spatial,
+temporal and depth-support matching plus a contributor/exclusion audit.
+
+Acceptance: adding a synthetic new sensor requires no changes to the GPR core;
+unknown units fail; missing sensors stay optional; same-named lines across surveys
+cannot collide; out-of-radius, out-of-time or incompatible-depth matches are excluded;
+texture fractions/methods/closure are validated; joins are reproducible. Confirm GRS
+meaning before implementing a gamma-ray adapter.
+
+Implemented: an adapter registry, strict manual sand/silt/clay CSV validation
+(metric CRS, UTC, depth, method, size cutoffs, uncertainty, units and closure),
+sample-level spatial/temporal/calibrated-depth matching, median aggregation and
+contributor/exclusion audit. `texture` and `match` commands write traceable runs.
+Synthetic adapter, validation, exclusion and repeatability tests pass. No real
+texture assays or secondary sensor files are supplied, so field joins and a
+specific EMI/GRS adapter remain pending. GRS meaning is still unconfirmed.
+
+## M4.5 — Interactive 3D Plot Explorer (planned; next priority)
+
+Dependencies: M2/M3 for field scenes; synthetic fixtures allow immediate development.
+M4 observation layers are optional. This intermediate milestone comes before M5.
+
+Build a local offline explorer with a four-plot selector, rotatable survey tracks,
+radar curtains, movable time/depth slices, measured/interpolated toggles and coverage
+overlays. Start with Plotly and existing SciPy/xarray tools. Interpolate quantitative
+attributes within compatible gates, with footprint/gap masks and whole-line spatial
+validation. Use calibrated depth only when evidence is available; otherwise label
+recording time in ns. Do not imply radar attributes are soil texture predictions.
+
+Deliver in four checkpoints: **a)** synthetic visual prototype, **b)** existing
+processing-product integration, **c)** supported interpolation, **d)** four-plot
+comparison, offline export and performance verification. The current unassigned
+field data remains diagnostic until CRS and plot geometry are reviewed.
+
+Acceptance: an offline synthetic four-plot demo supports rotation, layer/plot
+selection and slice navigation; measured gaps and unsupported regions stay visible;
+grids retain units, sources, calibration and support diagnostics; held-out-line
+evaluation reports error and supported coverage; rendering meets documented budgets.
+See [the detailed visualization implementation plan](visualization_plan.md) for
+UX, package boundaries, interpolation rules, artifacts and checkpoint criteria.
+
+## M5 — Calibrated texture inference
+
+Dependencies: M4 and enough independent, representative texture reference samples.
+
+Choose fractions or a named texture taxonomy. Implement mean/regularized baselines,
+constrained/compositional fraction predictions or class models as appropriate,
+spatial grouping/buffers, nested preprocessing/tuning and uncertainty. Evaluate
+sensor ablations and leave-one-plot-out transfer where reference coverage permits.
+Treat moisture/campaign conditions as potential confounders.
+
+Acceptance: no shared sample/support leaks across folds; preprocessing never fits on
+held-out data; predicted fractions are valid and close to the declared total;
+metrics have units and independent counts; report all four plot results when possible;
+interval coverage and residual maps are assessed; unsupported regions are masked.
+Sparse reference data produces a clear limitation, not fabricated model accuracy.
+
+## M6 — Field-ready reports and packaging
+
+Dependencies: M3 for radar reports; M4.5 for interactive scenes; M5 for texture products.
+
+Export plot coverage, radargrams, attributes, texture estimates, uncertainty and
+support masks in GIS formats and an HTML/PDF summary if needed. Provide a batch CLI
+over the four configs, complete/incomplete run markers and dependency-aware caching.
+Add synthetic CI on Windows and Linux; private data remains an opt-in local check.
+
+Acceptance: a clean environment reproduces a small synthetic end-to-end run; GIS
+files round-trip with matching CRS/nodata/depth units; a second run cannot overwrite
+the first; reports distinguish observations from inference; a full-scale line-by-line
+benchmark documents memory/runtime. Reuse the M4.5 viewer in reports; consider a
+broader application or distributed compute only when measured needs justify it.
+
+Validation on 2026-10-19: 35 synthetic tests pass, Ruff lint/format checks pass,
+two representative GPS lines and one GPR line were run locally, and all 80 lines
+were GPS-audited. `requirements-field-win-py313.lock` pins NumPy 2.5.4, SciPy
+1.18.1, xarray 2026.9.0, Zarr 3.4.1, pynmea2 1.19.0, pyproj 3.8.0 and
+Matplotlib 3.11.2. GIS rasters, full plot products and cross-platform CI are M6.
+
+## Field metadata to collect
+
+Plot boundaries/control/CRS, instrument settings, line spacing/direction, antenna/GNSS
+offsets, fix quality and datum, timestamps/weather, sample coordinates and uncertainty,
+depth intervals, laboratory particle-size methods, repeats, bulk density/moisture
+context and calibration measurements. Sampling should represent each plot's
+variability and support spatially separated evaluation. Exact sample counts and
+sensor choices need the study design; this scaffold does not invent them.

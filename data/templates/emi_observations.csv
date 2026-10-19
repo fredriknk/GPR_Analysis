@@ -1,0 +1,1 @@
+measurement_id,plot_id,survey_id,acquired_at_utc,x,y,crs,horizontal_uncertainty_m,instrument,channel_id,coil_geometry,coil_spacing_m,frequency_hz,sensor_height_m,eca_ms_per_m,inphase_ppt,calibration_id,quality_flag
