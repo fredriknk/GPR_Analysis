@@ -1,5 +1,9 @@
 # M4.5 — Interactive 3D Plot Explorer
 
+The follow-on [M7 volume and interpretation plan](volume_interpretation_plan.md)
+specifies radar volumes, reviewed layers, drainage candidates and QGIS exports.
+M7 is planned; the implemented M4.5 status below remains unchanged.
+
 Status: implementation, synthetic scientific/controller checks and browser review
 complete. Production acceptance remains conditional on field metadata/calibration.
 This intermediate milestone follows M2/M3 and precedes M5 texture modelling. It

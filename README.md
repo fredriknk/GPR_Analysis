@@ -30,6 +30,7 @@ All complementary sensor modules are optional and must accept new sensor types l
 - [Data contracts](docs/data_contracts.md): arrays, units, coordinates, sensor support.
 - [Implementation plan](docs/implementation_plan.md): ordered tasks and acceptance criteria.
 - [3D Plot Explorer](docs/visualization_plan.md): implemented M4.5 tools, commands, benchmark and release gates.
+- [Volumes, layers and drainage plan](docs/volume_interpretation_plan.md): planned M7 reconstruction, interpretation, QGIS exports and 6.1 Sol / xhigh handoff.
 - [Library assessment](docs/library_assessment.md): reuse decisions and primary sources.
 - [Test-data assessment](docs/test_data_assessment.md): observations and unresolved issues.
 - [Opt-in real-data checks](docs/local_data_checks.md): local binary/GPS/processing/storage regression suite.

@@ -1,5 +1,17 @@
 # Implementation handoff
 
+## Next requested work: M7 volumes and interpretation
+
+Use **6.1 Sol / xhigh** for the next implementation session. The detailed
+[M7 handoff](volume_interpretation_plan.md) specifies supported volumes for grid
+partitions 1 and 2, reviewed horizon/layer thickness, potential drainage paths,
+offline viewer controls, and numeric GeoTIFF/QML plus volume/mesh exports.
+It contains a copy-ready prompt and ordered acceptance checkpoints. This work is
+planned, not implemented; the current field data permits local recording-time
+diagnostics, with geographic/depth products conditional on actual evidence.
+
+## Existing implementation and constraints
+
 M0–M3 tooling, the manual-texture foundation of M4, the M4.5 explorer, M5 calibrated
 texture software and M6 reporting/packaging are implemented. Read AGENTS.md,
 README.md, docs/architecture.md, docs/data_contracts.md and the implementation plan

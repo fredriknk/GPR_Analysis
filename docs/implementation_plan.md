@@ -332,6 +332,24 @@ radargrams, GPS strips, window-quality summaries and a local HTML report.
 See [real_data_results.md](real_data_results.md) for measured results, reproduction
 commands and scientific limits. This run does not establish field texture accuracy.
 
+## M7 — Radar volumes, layers and drainage candidates (planned)
+
+Requested 2026-10-20; implementation has not started. The detailed
+[volume and interpretation plan](volume_interpretation_plan.md) defines six
+checkpoints: contracts/feasibility, supported scientific cubes, offline volume
+viewer, reviewed horizons/thickness, drainage candidates, and QGIS/release
+integration. It includes recommended methods, contracts, package boundaries,
+proposed commands, validation and a 6.1 Sol / xhigh implementation prompt.
+
+Reuse M3 quantitative profiles, M4.5 support rules/viewer and M6 GIS/run adapters.
+The existing 34-line and 22-line grid partitions are diagnostic display groups,
+not production plots. A new explicitly local time-volume contract can support
+their review without inventing a CRS or calibration. Geographic exports require
+reviewed geometry/CRS; metre thickness additionally requires physical time zero
+and applicable velocity evidence. Radar isosurfaces, interpreted layer boundaries
+and potential drainage paths remain separate products with source/support lineage.
+No new M7 commands or scientific products are implemented by this planning update.
+
 ## Field metadata to collect
 
 Plot boundaries/control/CRS, instrument settings, line spacing/direction, antenna/GNSS
