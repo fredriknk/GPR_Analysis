@@ -1,6 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {maskedMesh,sameSelection,validateView} = require('../src/soil_sensing/visualization/assets/volume.js');
+const {maskedMesh,sameSelection,validateView,defaultAttribute} = require('../src/soil_sensing/visualization/assets/volume.js');
+
+test('clipped envelope defaults to a supported attribute without fabricating data',()=>{
+  const missing=[[[null,null],[null,null]]];
+  const zero=[[[null,0],[null,null]]];
+  assert.equal(defaultAttribute({envelope:missing,signed_amplitude:zero,rms:missing}),'signed_amplitude');
+  assert.equal(defaultAttribute({envelope:zero,signed_amplitude:zero,rms:missing}),'envelope');
+  assert.equal(defaultAttribute({envelope:missing,signed_amplitude:missing,rms:missing}),'envelope');
+});
 
 test('masked slice topology requires all four corners including last cells',()=>{
   const mesh=maskedMesh([0,1,2],[0,1,2],[[0,0,0],[0,0,0],[0,0,0]],[[1,null,1],[1,1,1],[1,1,1]]);

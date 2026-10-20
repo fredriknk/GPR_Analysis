@@ -337,6 +337,13 @@ positions; `measured` admits measured positions only. Mixed directions require
 Incompatible axes, processing signatures, units, sessions or dates fail. There
 is no implicit normalization, vertical resampling or CRS assignment.
 
+Diagnostic direction grouping uses the principal axis of accepted, gap-limited
+track endpoints, independent of repeated fixes and travel sign. Stationary tracks
+or principal variance below twice the other variance remain unknown. This grouping
+does not establish antenna orientation. `evaluation_attribute` chooses
+`envelope` (default), `signed_amplitude` or `rms` for whole-line holdouts; the report
+names the attribute and retains null errors alongside zero coverage.
+
 `coordinate_mode` is `projected`, `raw_gps_relative` or explicit `synthetic_local`.
 Projected volumes require reviewed assignments, survey/plot, metric CRS and
 geometry. Raw-GPS volumes retain null CRS/production plot ID, an approximate
@@ -468,3 +475,8 @@ thresholds and cameras never change scientific exports. Custom contributor or
 position selections hide derived layers and download a `reconstruction_request`;
 reconstruction is a new Python run. View JSON is bound to its viewer hash and
 validates scenes, axes, layers, camera and controls before restoration.
+
+Optional `preview.partition_ids` is a nonempty list of unique existing complete
+partition IDs. It limits the standalone viewer/download bundle while preserving
+each selected product's full frozen contributors. This allows separate grid
+viewers when an embedded full-resolution payload exceeds browser transport limits.

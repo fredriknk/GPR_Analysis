@@ -1,7 +1,9 @@
 # M7 implementation and verification — 2026-10-20
 
 Package 0.4.0 implements the volume/interpretation baseline from
-[the M7 plan](volume_interpretation_plan.md). This is synthetic software verification.
+[the M7 plan](volume_interpretation_plan.md). The release verification below uses
+synthetic fixtures; subsequent [local real-grid checks](real_volume_results.md)
+also exercised both diagnostic partitions without establishing field accuracy.
 The supplied collection has not acquired field calibration, reviewed CRS/geometry,
 production plot identity or independently validated horizons/drains.
 
@@ -134,13 +136,18 @@ older Windows 3.11 locks remain available and unchanged.
   native QGIS style loading, transparent nodata and vector alignment still require
   application review. Product manifests explicitly say QML loading is unverified.
 - In-app browser security policy blocks `file://` navigation. Browser verification
-  used a restricted read-only synthetic asset preview with `connect-src 'none'`.
+  initially used a restricted read-only synthetic asset preview; the later
+  explicitly requested real-grid checks used the same loopback-only asset
+  allowlist approach with `connect-src 'none'`.
   Static exports embed data and use local assets, but direct file opening remains
   a manual check. The browser declined a download permission, so actual download/
   restore interactions were stopped. Controller tests cover restoration validation;
   browser downloads and file-chooser restoration are not claimed verified.
-- No private data checks or reconstruction were run for M7. Field partitions need
-  frozen memberships and compatible acquisition/direction policies. Geographic
+- M7 local checks now cover 56 full profiles in diagnostic grids 1 and 2, split
+  into four direction groups. All ten opt-in tests pass and all 241 originals
+  are unchanged. Clipping excludes all native envelope/RMS products; signed
+  cubes have sparse support and only 3–9% whole-line holdout coverage. See
+  [the measured results](real_volume_results.md). Geographic
   products need reviewed datum/CRS, identities and geometry; thickness additionally
   needs time zero, antenna geometry and velocity evidence. Absolute elevations,
   geological names and confirmed drains require further independent evidence.

@@ -18,6 +18,7 @@ from soil_sensing.runs import begin_run, finish_run
 from soil_sensing.spatial.gridding import GridOptions, polygon_domain
 from soil_sensing.spatial.plots import load_plots
 from soil_sensing.visualization.scene import axis_values, profile_signature, raw_gps_relative_xy
+from soil_sensing.volumes.audit import track_direction
 from soil_sensing.volumes.contracts import (
     ATTRIBUTES,
     capabilities,
@@ -51,6 +52,7 @@ def load_volume_config(path):
         "track_gap_m",
         "track_buffer_m",
         "evaluation_sample_step",
+        "evaluation_attribute",
         "evaluation_buffer_m",
         "preview",
     }
@@ -87,6 +89,8 @@ def load_volume_config(path):
     if type(step) is not int or step <= 0:
         raise ValueError("evaluation_sample_step must be a positive integer")
     data["evaluation_sample_step"] = step
+    if data.get("evaluation_attribute", "envelope") not in ATTRIBUTES:
+        raise ValueError("Unknown evaluation_attribute")
     stores = data.get("profiles", [])
     if not isinstance(stores, list) or any(not isinstance(v, str) or not v for v in stores):
         raise ValueError("profiles must contain paths")
@@ -248,17 +252,13 @@ def _prepare(profiles, partition, plots, data, grid, attributes, exclusions):
         valid_steps = located[1:] & located[:-1]
         diffs = np.diff(xy, axis=0)
         valid_steps &= np.linalg.norm(diffs, axis=1) <= data["track_gap_m"]
-        direction = "unknown"
-        if valid_steps.any():
-            angle = float(
-                np.degrees(np.arctan2(*np.median(diffs[valid_steps], axis=0)[::-1])) % 180
-            )
-            direction = "east_west" if angle < 45 or angle >= 135 else "north_south"
+        direction = track_direction(xy, valid_steps)
         dates = sorted({str(t)[:10] for t in p.time_utc.values if not np.isnat(t)})
         audit.append(
             dict(
                 line_id=line_id(p),
                 direction_group=direction,
+                direction_method="principal axis of accepted gap-limited track endpoints",
                 acquisition_dates=dates,
                 missing_positions=int((~located).sum()),
                 broken_segments=int((~valid_steps).sum()),
@@ -552,6 +552,7 @@ def volume_run(config_path, output, progress=None):
                 options,
                 sample_step=data["evaluation_sample_step"],
                 buffer_m=data["evaluation_buffer_m"],
+                attribute=data.get("evaluation_attribute", "envelope"),
             )
             write_json(root / "evaluation.json", evaluation)
             products.append(

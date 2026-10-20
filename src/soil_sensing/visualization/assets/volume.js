@@ -1,6 +1,9 @@
 /* Viewing and analyst decisions only. Scientific reconstruction stays in Python. */
 "use strict";
 const VolumeUI = (() => {
+  function defaultAttribute(attributes) {
+    return ["envelope","signed_amplitude","rms"].find(name=>attributes[name]?.some(plane=>plane.some(row=>row.some(Number.isFinite)))) || "envelope";
+  }
   function sameSelection(expected, actual) {
     return expected.length === actual.length && [...expected].sort().every((v, i) => v === [...actual].sort()[i]);
   }
@@ -30,7 +33,7 @@ const VolumeUI = (() => {
     if(v.camera && !["eye","up","center"].every(key=>v.camera[key] && ["x","y","z"].every(axis=>Number.isFinite(v.camera[key][axis])))) throw Error("Invalid camera");
     return v;
   }
-  return {sameSelection,maskedMesh,validateView};
+  return {sameSelection,maskedMesh,validateView,defaultAttribute};
 })();
 if(typeof module!=="undefined") module.exports=VolumeUI;
 if(typeof document!=="undefined") (()=>{
@@ -42,6 +45,7 @@ if(typeof document!=="undefined") (()=>{
   function fresh(){const s=scene();return VolumeUI.sameSelection(s.selection.lines.map(JSON.stringify),selected()) && $("position").value===s.selection.position_policy;}
   function download(value,name){const blob=new Blob([JSON.stringify(value,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
   function setup(){const s=scene();$("source").replaceChildren();$("lines").replaceChildren();s.source_profiles.forEach((p,i)=>{$("source").add(new Option(p.profile_id,i));const o=new Option(p.profile_id,JSON.stringify([p.source_id,p.profile_id]));o.selected=true;$("lines").add(o);});for(const [key,axis]of [["slice",s.vertical],["xclip",s.x],["yclip",s.y]]){$(key).max=axis.length-1;$(key).value=Math.floor(axis.length/2);}$("position").value=s.selection.position_policy;$("download").href=s.download;$("badge").textContent=s.metadata.synthetic?"SYNTHETIC DEMO":s.metadata.diagnostic?"LOCAL DIAGNOSTIC":"REVIEWED GEOMETRY";$("capabilities").textContent=Object.entries(s.capabilities).filter(([,v])=>!v.allowed).map(([k,v])=>k.replaceAll("_"," ")+": "+v.missing.join(", ")).join(" · ");decisions=[];$("pickCount").textContent="0 review decisions";camera=null;
+    $("attribute").value=VolumeUI.defaultAttribute(s.attributes);
     $("layer").replaceChildren(new Option("All interpreted layers","all"));
     s.interpretations.filter(o=>o.kind==="interpreted_layers").forEach(o=>o.layers.forEach(l=>$("layer").add(new Option(l.layer_id,l.layer_id))));
     $("candidate").replaceChildren();
@@ -76,15 +80,16 @@ if(typeof document!=="undefined") (()=>{
     if(ok && $("mode").value==="drains")for(const obj of s.interpretations.filter(o=>o.kind==="drainage_candidates")){const detections=obj.detections.filter(d=>d.accepted_detection);traces.push({type:"scatter3d",mode:"markers",x:detections.map(d=>d.xy[0]),y:detections.map(d=>d.xy[1]),z:detections.map(d=>d.two_way_time_ns),marker:{size:5,color:"#ffbd72"},text:detections.map(d=>`${d.detection_id}<br>Evidence score ${d.score?.toFixed(3)}; proposed<br>Time ${d.two_way_time_ns} ns; radius symbolic`),hovertemplate:"%{text}<extra></extra>",name:"Candidate crossings (time ns)"});for(const e of obj.association_graph){const a=detections.find(d=>d.detection_id===e.left),b=detections.find(d=>d.detection_id===e.right);if(a&&b)traces.push({type:"scatter3d",mode:"lines",x:[a.xy[0],b.xy[0]],y:[a.xy[1],b.xy[1]],z:[a.two_way_time_ns,b.two_way_time_ns],line:{color:"#ffbd72",width:6},name:"Alternative symbolic path (symbolic width)",showlegend:false});}objectCount+=detections.length;}
     $("state").textContent=ok?"Frozen reconstruction matches all visible contributors.":"Rebuild required: source selection or position policy changed. Derived products are hidden.";
     $("sliceLabel").textContent=`${s.vertical[zi].toFixed(2)} ${unit}`;$("xLabel").textContent=`${s.x[xi].toFixed(1)} m`;$("yLabel").textContent=`${s.y[yi].toFixed(1)} m`;
-    $("notice").textContent=`${s.metadata.coordinate_note}. ${s.metadata.vertical_axis.replaceAll("_"," ")} (${unit}), positive down · flat relative ground · preview stride ${s.preview_step}; scientific exports retain native samples. ${["layers","drains"].includes($("mode").value)&&!objectCount?"No supported interpretation in this selection.":""}`;
+    const triangleCount=traces.filter(t=>t.type==="mesh3d").reduce((n,t)=>n+t.i.length,0);
+    $("notice").textContent=`${s.metadata.coordinate_note}. ${s.metadata.vertical_axis.replaceAll("_"," ")} (${unit}), positive down · flat relative ground · preview stride ${s.preview_step}; scientific exports retain native samples. ${$("mode").value==="volume"&&!limits.length?`No supported ${attr.replaceAll("_"," ")} voxels in this preview; inspect scientific quality/geometry masks and native B-scans.`:$("mode").value==="volume"&&ok&&!triangleCount?"No supported cells at these cutaways; move the slice/X/Y controls or increase preview detail.":""} ${["layers","drains"].includes($("mode").value)&&!objectCount?"No supported interpretation in this selection.":""}`;
     const zLabel=$("mode").value==="curtains"||$("mode").value==="drains"?"Recording time (ns)":`${s.metadata.vertical_axis.replaceAll("_"," ")} (${unit})`;
     const layout={paper_bgcolor:"#0d141c",font:{color:"#d7e4ef"},margin:{l:0,r:70,t:10,b:0},showlegend:false,uirevision:s.partition_id,scene:{bgcolor:"#0d141c",xaxis:{title:{text:"Local east (m)"}},yaxis:{title:{text:"Local north (m)"}},zaxis:{title:{text:zLabel},autorange:"reversed"},aspectmode:"manual",aspectratio:{x:1,y:1,z:.65},camera:camera||{eye:{x:1.5,y:1.5,z:1.1}}}};
     await Plotly.react("scene",traces,layout,{responsive:true,displaylogo:false});
     if(!$("scene")._volumeCameraListener){$("scene").on("plotly_relayout",event=>{if(event["scene.camera"])camera=event["scene.camera"];});$("scene")._volumeCameraListener=true;}
-    $("supportLabel").textContent=`${traces.filter(t=>t.type==="mesh3d").reduce((n,t)=>n+t.i.length,0).toLocaleString()} supported triangles · support is not uncertainty`;
+    $("supportLabel").textContent=`${triangleCount.toLocaleString()} supported triangles · support is not uncertainty`;
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
     if(openingMs===null) openingMs=performance.now();
-    const measurement={render_ms:performance.now()-t0,partition:s.partition_id,mode:$("mode").value,stale:!ok,objects:objectCount};
+    const measurement={render_ms:performance.now()-t0,partition:s.partition_id,mode:$("mode").value,stale:!ok,objects:objectCount,triangles:triangleCount};
     measurements.push(measurement);
     document.body.dataset.volumeMetrics=JSON.stringify({opening_ms:openingMs,user_agent:navigator.userAgent,renders:measurements.slice(-100)});
   }).catch(e=>{$("state").textContent=e.message;});return renderPromise;}

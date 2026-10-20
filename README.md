@@ -24,6 +24,8 @@ velocity calibration, real lab texture samples or field texture predictions are 
 M7 adds native-sample radar cubes, offline cutaways, reviewed horizon/layer products,
 analyst-seeded drainage candidates and numerical interpretation exports. See
 [the M7 release notes](docs/volume_release.md); field interpretation remains unvalidated.
+Local [grid-1/2 volume checks](docs/real_volume_results.md) now cover 56 full
+profiles, with sparse signed-amplitude support and clipping-excluded envelope/RMS.
 GRS provisionally means gamma-ray spectrometry; confirm before implementing that adapter.
 All complementary sensor modules are optional and must accept new sensor types later.
 

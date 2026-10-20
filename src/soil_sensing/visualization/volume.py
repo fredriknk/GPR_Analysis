@@ -49,7 +49,7 @@ def conservative_preview_mask(mask, step):
 def write_volume_viewer(volume_root, output, *, interpretations=(), preview=None):
     volume_root, output = Path(volume_root), Path(output)
     preview = preview or {}
-    if set(preview) - {"max_voxels", "max_payload_mb", "max_native_samples"}:
+    if set(preview) - {"max_voxels", "max_payload_mb", "max_native_samples", "partition_ids"}:
         raise ValueError("Unknown volume preview option")
     max_voxels = preview.get("max_voxels", 60_000)
     max_native = preview.get("max_native_samples", 1_000_000)
@@ -61,6 +61,17 @@ def write_volume_viewer(volume_root, output, *, interpretations=(), preview=None
     ):
         raise ValueError("Preview budgets must be finite positive limits")
     catalog = json.loads((volume_root / "products.json").read_text(encoding="utf-8"))
+    selected = preview.get("partition_ids")
+    if selected is not None:
+        available = {p["partition_id"] for p in catalog["partitions"]}
+        if (
+            not isinstance(selected, list)
+            or not selected
+            or any(not isinstance(p, str) or p not in available for p in selected)
+            or len(set(selected)) != len(selected)
+        ):
+            raise ValueError("preview.partition_ids must name unique existing complete partitions")
+        catalog["partitions"] = [p for p in catalog["partitions"] if p["partition_id"] in selected]
     scenes = []
     downloads = output / "downloads"
     downloads.mkdir(exist_ok=True)

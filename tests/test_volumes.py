@@ -23,6 +23,7 @@ if HAS_VOLUME:
     from soil_sensing.spatial.gridding import GridOptions, polygon_domain
     from soil_sensing.visualization.synthetic import synthetic_plots
     from soil_sensing.visualization.volume import conservative_preview_mask
+    from soil_sensing.volumes.audit import track_direction
     from soil_sensing.volumes.contracts import (
         ATTRIBUTES,
         Reason,
@@ -80,6 +81,20 @@ def metadata():
 
 @unittest.skipUnless(HAS_VOLUME, "Requires processing, field, visualization extras")
 class CubeTests(unittest.TestCase):
+    def test_direction_repeated_fixes_reversal_and_ambiguous_tracks(self):
+        north = np.repeat([[0, 0], [0, 1], [0, 2], [0, 3]], 8, axis=0)
+        for xy in (north, north[::-1]):
+            self.assertEqual(track_direction(xy, np.ones(len(xy) - 1, bool)), "north_south")
+            self.assertEqual(track_direction(xy[:, ::-1], np.ones(len(xy) - 1, bool)), "east_west")
+        for xy in (np.zeros((12, 2)), np.array([[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]])):
+            self.assertEqual(track_direction(xy, np.ones(len(xy) - 1, bool)), "unknown")
+        # An isolated rejected outlier cannot rotate a valid north/south track.
+        xy = np.r_[north, [[100, 0]]]
+        self.assertEqual(
+            track_direction(xy, np.r_[np.ones(len(north) - 1, bool), False]), "north_south"
+        )
+        self.assertEqual(track_direction(north, np.zeros(len(north) - 1, bool)), "unknown")
+
     def setUp(self):
         self.boundary = [[0, 0], [10, 0], [10, 10], [0, 10]]
         self.domain = polygon_domain(self.boundary)
@@ -225,6 +240,30 @@ class CubeTests(unittest.TestCase):
                 "candidate"
             ]["mae"],
             1000,
+        )
+        attrs["envelope"] = np.full(attrs["envelope"].shape, np.nan)
+        signed = evaluate_volume(
+            rows,
+            attrs,
+            np.arange(4),
+            np.arange(4),
+            self.boundary,
+            self.domain,
+            metadata(),
+            self.grid,
+            self.options,
+            sample_step=2,
+            attribute="signed_amplitude",
+        )
+        self.assertEqual(signed["attribute"], "signed_amplitude")
+        self.assertTrue(signed["folds"])
+        self.assertTrue(any(f["supported_count"] for f in signed["folds"]))
+        self.assertTrue(
+            all(
+                f["metrics"]["candidate"]["mae"] < 1e-9
+                for f in signed["folds"]
+                if f["supported_count"]
+            )
         )
 
     def test_budgets_checked_before_dense_mesh_or_stencil_growth(self):
@@ -441,13 +480,23 @@ class VolumeWorkflowTests(unittest.TestCase):
                 self.assertFalse(list((root / "gis").glob("*thickness*")))
             view = root / "view.toml"
             view.write_text(
-                'schema_version="1.0"\nvolume_run="volume"\ninterpretation_runs=["layers"]\n',
+                'schema_version="1.0"\nvolume_run="volume"\ninterpretation_runs=["layers"]\n'
+                '[preview]\npartition_ids=["grid-01"]\n',
                 encoding="utf-8",
             )
             volume_visualize_run(view, root / "viewer")
             self.assertTrue((root / "viewer/downloads/grid-01.zip").is_file())
+            self.assertFalse((root / "viewer/downloads/grid-02.zip").exists())
+            self.assertEqual(
+                json.loads((root / "viewer/run.json").read_text())["partition_count"], 1
+            )
             self.assertIn("assets/volume.js", (root / "viewer/index.html").read_text())
             self.assertEqual(native_hash, tree_hash(root / "volume"))
+            view.write_text(
+                'schema_version="1.0"\nvolume_run="volume"\n[preview]\npartition_ids=["absent"]\n'
+            )
+            with self.assertRaisesRegex(ValueError, "unique existing complete partitions"):
+                volume_visualize_run(view, root / "unknown-view")
             with self.assertRaises(ValueError):
                 volume_run(config, root / "volume")
 

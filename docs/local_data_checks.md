@@ -66,3 +66,29 @@ suite then passed all 65 tests. The local logs are
 `outputs/synthetic-checks-after-local-tests-2026-10-20.log`.
 The separately saved [real-data results](real_data_results.md) include radargrams
 and full quantitative products, rather than only test logs.
+
+## Completed M7 volume runs
+
+`tests_local/test_real_volumes.py` adds four explicitly enabled, read-only checks
+against completed local scientific and input runs. It verifies exact grid-01/02
+parent memberships across four direction-separated products, complete native
+round trips, cube/support contracts, sampled native-to-voxel weighted values,
+clipping masks, capability gates, signed whole-line holdout coverage and all
+original/input hashes. These are regression checks for this development collection,
+not field calibration or interpretation validation. Both environment variables are
+required; otherwise the four tests skip without reading the data.
+
+```powershell
+$env:SOIL_SENSING_REAL_VOLUME_RUN = (Resolve-Path outputs/real-grid-volumes-final-2026-10-20).Path
+$env:SOIL_SENSING_REAL_VOLUME_INPUTS = (Resolve-Path outputs/real-volume-inputs-2026-10-20).Path
+.\.venv\Scripts\python.exe -m unittest discover -s tests_local -p test_real_volumes.py -v
+Remove-Item Env:SOIL_SENSING_REAL_VOLUME_RUN
+Remove-Item Env:SOIL_SENSING_REAL_VOLUME_INPUTS
+```
+
+Set `SOIL_SENSING_REAL_DATA_ROOT` as above and omit `-p` to run all ten checks.
+Executed together on 2026-10-20: ten passed in 56.210 seconds, with all 241
+originals unchanged. The log is `outputs/real-grid-volume-checks-2026-10-20.log`.
+The source suite afterward passed 93 Python tests and 13 Node controller tests;
+Ruff passed. See [real_volume_results.md](real_volume_results.md) for settings,
+measured support/errors, viewer budgets and remaining limits.

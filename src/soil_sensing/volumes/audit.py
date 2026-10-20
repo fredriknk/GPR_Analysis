@@ -5,6 +5,30 @@ from scipy.spatial import cKDTree
 from shapely import LineString
 
 
+def track_direction(xy, valid_steps):
+    """Classify the dominant track axis, independent of travel sign/repeated fixes.
+
+    Only endpoints of accepted, gap-limited steps enter the fit. Near-isotropic
+    tracks (principal variance less than twice the other variance) stay unknown.
+    This diagnostic grouping does not establish antenna orientation or precision.
+    """
+    xy, valid_steps = np.asarray(xy, float), np.asarray(valid_steps, bool)
+    if xy.ndim != 2 or xy.shape[1] != 2 or valid_steps.shape != (max(0, len(xy) - 1),):
+        raise ValueError("Direction requires XY points and one mask per consecutive step")
+    if len(xy) < 2:
+        return "unknown"
+    endpoints = np.r_[valid_steps, False] | np.r_[False, valid_steps]
+    points = xy[endpoints & np.isfinite(xy).all(axis=1)]
+    if len(points) < 2:
+        return "unknown"
+    centered = points - points.mean(axis=0)
+    variance, vectors = np.linalg.eigh(centered.T @ centered)
+    if variance[-1] <= 0 or variance[-1] < 2 * variance[0]:
+        return "unknown"
+    angle = float(np.degrees(np.arctan2(*vectors[:, -1][::-1])) % 180)
+    return "east_west" if angle < 45 or angle >= 135 else "north_south"
+
+
 def geometry_audit(rows, attributes, acquisition_audit, *, max_gap_m, proximity_m):
     lines = sorted({r["line_id"] for r in rows})
     indices = {

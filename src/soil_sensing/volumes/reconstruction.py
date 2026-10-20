@@ -292,10 +292,13 @@ def evaluate_volume(
     *,
     sample_step=16,
     buffer_m=0,
+    attribute="envelope",
 ):
     """Whole-line holdouts; bins, masks and triangulations rebuilt on training only."""
     from soil_sensing.spatial.interpolation import interpolate_support
 
+    if attribute not in ATTRIBUTES:
+        raise ValueError("Unknown evaluation attribute")
     reports = []
     chosen = np.arange(0, len(vertical), sample_step)
     for held_line in sorted({r["line_id"] for r in rows}):
@@ -329,7 +332,7 @@ def evaluate_volume(
             ]
             training_domain = domain.intersection(unary_union(segments))
         for sample in chosen:
-            data = attributes["envelope"][:, sample]
+            data = attributes[attribute][:, sample]
             train = [
                 {**rows[i], "value": float(data[i])} for i in train_indices if np.isfinite(data[i])
             ]
@@ -370,7 +373,7 @@ def evaluate_volume(
             )
     return dict(
         schema_version="1.0",
-        attribute="envelope",
+        attribute=attribute,
         unit=metadata["attribute_unit"],
         fold_unit="whole_line",
         sample_step=sample_step,

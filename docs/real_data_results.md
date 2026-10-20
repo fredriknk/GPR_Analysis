@@ -1,5 +1,9 @@
 # Real-data diagnostic results — 2026-10-20
 
+The later [M7 real-volume checks](real_volume_results.md) cover diagnostic grids
+1 and 2: 56 full profiles, four direction-separated time volumes, conservative
+clipping masks, whole-line holdouts and two full-detail local viewers.
+
 The pipeline was run on five original DT1 recordings, comprising 23,415 traces
 and 5,853,750 amplitude samples. The local, verified report is:
 

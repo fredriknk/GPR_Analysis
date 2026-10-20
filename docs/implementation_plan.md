@@ -365,6 +365,16 @@ arbitrary resampling, absolute elevation, fitted spatial/model uncertainty and
 independently validated pipe identification remain outside the baseline. New tests
 require no private data.
 
+Subsequent local M7 checks reconstructed grids 1 and 2 from 56 full profiles,
+split into four observed direction groups. The updated source suite passes 93
+Python and 13 Node tests; ten opt-in private tests pass with all 241 originals
+unchanged. Repeated GPS fixes exposed and corrected a direction-classification
+bug. All envelope/RMS voxels are conservatively excluded by clipping; supported
+signed-amplitude holdout coverage is only 3–9%. Full-detail viewers are separated
+by parent grid to fit the in-app transport limit. Commands, measurements and
+limitations are in [real_volume_results.md](real_volume_results.md); these checks
+do not establish field calibration or interpretation accuracy.
+
 ## Field metadata to collect
 
 Plot boundaries/control/CRS, instrument settings, line spacing/direction, antenna/GNSS
