@@ -1,5 +1,11 @@
 # Data contracts
 
+Optional M7 anomaly artifacts are specified in [volume_detection.md](volume_detection.md):
+`anomaly_labels.npz` contains complete-cell component IDs, and `anomalies.json`
+contains the parent selection hash, scoring parameters, per-slice baselines and
+proposed candidate bounds. A component is an exploratory radar anomaly, with no
+material identity, detection probability or physical-volume claim.
+
 M7 adds independent volume/interpretation schema 1.0 below. It does not change
 RadarProfile 0.2, geographic attribute-grid 0.1 or the original pick CSV.
 

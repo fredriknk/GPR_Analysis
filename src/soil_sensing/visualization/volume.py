@@ -319,6 +319,12 @@ def write_volume_viewer(volume_root, output, *, interpretations=(), preview=None
                 download="downloads/" + zip_path.name,
             )
         )
+        if (root / "anomalies.json").exists() and step == 1:
+            scenes[-1]["anomalies"] = json.loads(
+                (root / "anomalies.json").read_text(encoding="utf-8")
+            )
+            with np.load(root / "anomaly_labels.npz") as labels:
+                scenes[-1]["anomaly_labels"] = packed_array(labels["labels"])
     payload = _safe(dict(schema_version="1.0", kind="volume_viewer", scenes=scenes))
     payload["viewer_hash"] = digest(payload)
     encoded = json.dumps(payload, allow_nan=False, separators=(",", ":"))

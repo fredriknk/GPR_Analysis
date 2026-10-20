@@ -55,9 +55,21 @@ def load_volume_config(path):
         "evaluation_attribute",
         "evaluation_buffer_m",
         "preview",
+        "detection",
     }
     if data.get("schema_version") != "1.0" or set(data) - allowed:
         raise ValueError("Unknown volume config field/schema")
+    if "detection" in data:
+        from soil_sensing.volumes.detection import detect_anomalies
+
+        detection = data["detection"]
+        if not isinstance(detection, dict) or set(detection) - {
+            "threshold",
+            "minimum_cells",
+            "minimum_slice",
+        }:
+            raise ValueError("Unknown detection option")
+        detect_anomalies(np.zeros((2, 2, 2)), np.ones((1, 1), bool), **detection)
     for name in ("synthetic", "synthetic_depth"):
         if type(data.get(name, False)) is not bool:
             raise ValueError(f"{name} must be Boolean")
@@ -513,6 +525,10 @@ def volume_run(config_path, output, progress=None):
                 rows, arrays, vertical, native_samples, boundary, domain, metadata, grid, options
             )
             save_blocks(reconstruction, root)
+            if "detection" in data:
+                from soil_sensing.volumes.detection import write_anomalies
+
+                write_anomalies(root, data["detection"])
             write_json(root / "selection.json", selection)
             write_json(root / "capabilities.json", capabilities(metadata))
             from soil_sensing.volumes.audit import geometry_audit

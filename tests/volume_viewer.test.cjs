@@ -3,6 +3,22 @@ const assert = require('node:assert/strict');
 const {maskedMesh,sameSelection,validateView,defaultAttribute} = require('../src/soil_sensing/visualization/assets/volume.js');
 const {voxelMesh,unpack,statistics} = require('../src/soil_sensing/visualization/assets/volume.js');
 
+test('candidate inspection selects nearest finite source track',()=>{
+  const {nearestSource}=require('../src/soil_sensing/visualization/assets/volume.js');
+  assert.equal(nearestSource([{xy:[[null,null],[20,20]]},{xy:[[2,3]]}],{x_m:[1,3],y_m:[2,4]}),1);
+});
+
+test('anomaly selection preserves component membership and missing corners',()=>{
+  const data=Array.from({length:2},()=>[[4,4,4,4],[4,4,4,4]]);
+  const labels=[[[1,0,2]]];
+  const mesh=id=>voxelMesh([0,1,2,3],[0,1],[0,1],data,[[true,true,true]],0,0,1,labels,id);
+  assert.equal(mesh(0).cellCount,2);
+  assert.equal(mesh(2).cellCount,1);
+  assert.equal(mesh(3).cellCount,0);
+  data[0][0][3]=null;
+  assert.equal(mesh(2).cellCount,0);
+});
+
 test('volume draws closed supported cells and removes internal faces',()=>{
   const data=Array.from({length:2},()=>Array.from({length:2},()=>[3,3,3]));
   const mesh=voxelMesh([0,1,2],[0,1],[0,1],data,[[true,true]],2);

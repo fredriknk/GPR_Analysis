@@ -1,5 +1,9 @@
 # Architecture
 
+Opt-in coherent RMS anomaly detection lives in `volumes/detection.py`. It writes
+full-resolution component labels and auditable slice baselines after reconstruction;
+the viewer only filters those labels. See [volume_detection.md](volume_detection.md).
+
 The real-data M7 revision adds `volumes/collection.py` to freeze complete parent
 grid memberships from verified collection runs. Crossing directions remain in
 one explicitly combined diagnostic cube, with direction counts and native

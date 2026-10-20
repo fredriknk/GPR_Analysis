@@ -6,8 +6,8 @@ input:disabled,select:disabled{opacity:.4;cursor:not-allowed}#availability{font-
 <header><h1>Radar volume interpretation</h1><span>Measured traces · supported estimates · reviewed objects</span><span class="badge" id="badge"></span></header>
 <main><aside>
 <label for="partition">Survey grid</label><select id="partition"></select>
-<label for="mode">View</label><select id="mode"><option value="volume">3D radar volume</option><option value="slices">Orthogonal cutaways</option><option value="plan">Time / depth map</option><option value="curtains">Native curtain</option><option value="layers">Interpreted layers</option><option value="drains">Drainage candidates</option></select>
-<p id="availability"></p><label for="layer">Layer shell</label><select id="layer"><option value="all">All interpreted layers</option></select>
+<label for="mode">View</label><select id="mode"><option value="volume">3D radar volume</option><option value="anomalies">Coherent 3D anomalies</option><option value="slices">Orthogonal cutaways</option><option value="plan">Time / depth map</option><option value="curtains">Native curtain</option><option value="layers">Interpreted layers</option><option value="drains">Drainage candidates</option></select>
+<p id="availability"></p><label for="anomaly">RMS anomaly candidate</label><select id="anomaly"></select><label for="layer">Layer shell</label><select id="layer"><option value="all">All interpreted layers</option></select>
 <label for="attribute">Quantitative attribute</label><select id="attribute"><option value="envelope">Hilbert envelope</option><option value="signed_amplitude">Signed amplitude</option><option value="rms">Short-window RMS</option></select>
 <label for="slice">Time / depth slice <output id="sliceLabel"></output></label><input type="range" id="slice" min="0" value="0">
 <label for="xclip">X cutaway <output id="xLabel"></output></label><input type="range" id="xclip" min="0" value="0">

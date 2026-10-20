@@ -334,6 +334,12 @@ commands and scientific limits. This run does not establish field texture accura
 
 ## M7 — Radar volumes, layers and drainage candidates (baseline implemented)
 
+2026-10-21 follow-up: opt-in coherent RMS anomaly detection and an isolated
+candidate volume view are implemented. Both complete grid locations are used for
+local execution. Commands, artifact contracts and limits are documented in
+[volume_detection.md](volume_detection.md). Detection accuracy remains unvalidated
+without field ground truth; candidates retain proposed status.
+
 Implemented 2026-10-20 in package 0.4.0. The detailed
 [volume and interpretation plan](volume_interpretation_plan.md) defines six
 checkpoints: contracts/feasibility, supported scientific cubes, offline volume

@@ -186,6 +186,42 @@ class RealVolumeTests(unittest.TestCase):
         for path, digest in self.manifest["inputs"].items():
             self.assertEqual(self.input_hash(path), digest, path)
 
+    def test_optional_anomalies_have_supported_corners_and_reproducible_scores(self):
+        import numpy as np
+        import xarray as xr
+
+        checked = 0
+        for product in self.catalog["partitions"]:
+            root = self.root / product["path"]
+            if not (root / "anomalies.json").exists():
+                continue
+            report = json.loads((root / "anomalies.json").read_text())
+            with np.load(root / "anomaly_labels.npz") as saved:
+                labels = saved["labels"]
+            with xr.open_zarr(root / "volume.zarr", chunks=None) as cube:
+                self.assertEqual(report["selection_hash"], cube.attrs["selection_hash"])
+                self.assertEqual(labels.shape, tuple(n - 1 for n in cube.rms.shape))
+                values, valid = cube.rms.values, cube.rms_valid.values
+                for c in report["candidates"]:
+                    indices = np.argwhere(labels == c["candidate_id"])
+                    self.assertEqual(len(indices), c["cell_count"])
+                    self.assertGreaterEqual(len(indices), report["minimum_cells"])
+                    for z, y, x in indices:
+                        self.assertTrue(valid[z : z + 2, y : y + 2, x : x + 2].all())
+                        scores = []
+                        for t in (z, z + 1):
+                            baseline = report["baselines"][t]
+                            scores.extend(
+                                (
+                                    (values[t, y : y + 2, x : x + 2] - baseline["median"])
+                                    / baseline["scale"]
+                                ).ravel()
+                            )
+                        self.assertGreaterEqual(np.mean(scores), report["threshold"] - 1e-10)
+                checked += 1
+        if not checked:
+            self.skipTest("Run predates optional anomaly detection")
+
 
 if __name__ == "__main__":
     unittest.main()

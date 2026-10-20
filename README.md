@@ -32,6 +32,9 @@ All complementary sensor modules are optional and must accept new sensor types l
 
 ## Start here
 
+- [Coherent volume anomaly review](docs/volume_detection.md): full-resolution RMS
+  candidate detection and isolated 3D views for the two complete grid locations.
+
 - [Architecture](docs/architecture.md): boundaries, scientific workflow, decisions.
 - [Data contracts](docs/data_contracts.md): arrays, units, coordinates, sensor support.
 - [Implementation plan](docs/implementation_plan.md): ordered tasks and acceptance criteria.
