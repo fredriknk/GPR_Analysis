@@ -8,7 +8,7 @@ from pathlib import Path
 import xarray as xr
 
 from soil_sensing.export.report import verify_run
-from soil_sensing.export.scene import visualize_run
+from soil_sensing.export.scene import suggest_diagnostic_partitions, visualize_run
 from soil_sensing.ingest import write_json
 from soil_sensing.inventory import build_inventory
 from soil_sensing.io.dt1 import find_sidecar, read_dt1
@@ -16,11 +16,29 @@ from soil_sensing.io.storage import load_profile, save_profile
 from soil_sensing.processing.gpr import process_profile
 from soil_sensing.runs import begin_run, finish_run
 from soil_sensing.spatial.gps import GPSOptions, locate_profile
+from soil_sensing.visualization.scene import gps_line_metrics
 from soil_sensing.workflow import load_processing_config
 
 
 def _toml_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=True)
+
+
+def _partition_toml(partitions) -> str:
+    blocks = []
+    for partition in partitions:
+        lines = ",\n".join(
+            f"  [{_toml_string(source_id)}, {_toml_string(profile_id)}]"
+            for source_id, profile_id in partition["lines"]
+        )
+        blocks.append(
+            "[[diagnostic_partitions]]\n"
+            f"partition_id = {_toml_string(partition['partition_id'])}\n"
+            f"label = {_toml_string(partition['label'])}\n"
+            f"default_visible = {str(partition['default_visible']).lower()}\n"
+            "lines = [\n" + lines + "\n]\n"
+        )
+    return "\n".join(blocks)
 
 
 def main() -> None:
@@ -39,6 +57,9 @@ def main() -> None:
         help="Combine nearby lines by raw GPS layout, or keep one odometer scene per line",
     )
     parser.add_argument("--cluster-distance-m", type=float, default=1000.0)
+    parser.add_argument("--grid-line-max-length-m", type=float, default=15.0)
+    parser.add_argument("--grid-partition-distance-m", type=float, default=20.0)
+    parser.add_argument("--grid-partition-min-lines", type=int, default=4)
     args = parser.parse_args()
     root = args.root.resolve()
     processing_config = args.processing_config.resolve()
@@ -71,6 +92,9 @@ def main() -> None:
             "vertical_axis": "recording_time",
             "diagnostic_layout": args.layout,
             "diagnostic_cluster_distance_m": args.cluster_distance_m,
+            "grid_line_max_length_m": args.grid_line_max_length_m,
+            "grid_partition_distance_m": args.grid_partition_distance_m,
+            "grid_partition_min_lines": args.grid_partition_min_lines,
             "rms_gate_ns": [50.0, 90.0],
             "display_trace_step": 20,
             "display_sample_step": 4,
@@ -80,6 +104,7 @@ def main() -> None:
         },
     )
     summaries = []
+    line_geometry = []
     stores = []
     try:
         for number, entry in enumerate(entries, 1):
@@ -96,6 +121,8 @@ def main() -> None:
             save_profile(processed, store)
             with load_profile(store) as restored:
                 xr.testing.assert_identical(processed, restored)
+            geometry = gps_line_metrics(processed)
+            line_geometry.append(geometry)
             summaries.append(
                 {
                     "profile_id": entry["profile_id"],
@@ -104,6 +131,7 @@ def main() -> None:
                     "odometer_distance_m": float(processed.distance_m.values[-1]),
                     "acquisition_date": processed.attrs["original_hd"]["acquisition_date"],
                     "gps": gps_qc,
+                    "gps_geometry": geometry,
                     "store": relative.as_posix(),
                     "round_trip_verified": True,
                 }
@@ -113,6 +141,16 @@ def main() -> None:
             located.close()
             processed.close()
 
+        partitions = (
+            suggest_diagnostic_partitions(
+                line_geometry,
+                max_line_length_m=args.grid_line_max_length_m,
+                center_distance_m=args.grid_partition_distance_m,
+                min_lines=args.grid_partition_min_lines,
+            )
+            if args.layout == "gps"
+            else []
+        )
         config = output / "viewer.toml"
         profile_lines = "\n".join(f"  {_toml_string(path.as_posix())}," for path in stores)
         config.write_text(
@@ -122,7 +160,7 @@ def main() -> None:
             f"diagnostic_cluster_distance_m = {args.cluster_distance_m}\n"
             'vertical_axis = "recording_time"\n'
             "profiles = [\n" + profile_lines + "\n]\n"
-            "gates = [[50.0, 90.0]]\n\n"
+            "gates = [[50.0, 90.0]]\n\n" + _partition_toml(partitions) + "\n"
             "[render]\n"
             "trace_step = 20\n"
             "sample_step = 4\n"
@@ -142,6 +180,7 @@ def main() -> None:
                     item["trace_count"] * item["sample_count"] for item in summaries
                 ),
                 "profiles": summaries,
+                "diagnostic_partitions": partitions,
                 "limitation": (
                     "Approximate relative layout from raw NMEA coordinates; no verified "
                     "datum, geographic CRS, depth calibration, spatial interpolation, or "

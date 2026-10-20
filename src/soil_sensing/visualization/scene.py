@@ -30,6 +30,7 @@ class Scene:
     coordinate_mode: str = "projected"
     coordinate_note: str | None = None
     coordinate_anchor_latlon: list[float] | None = None
+    line_partitions: list = field(default_factory=list)
     curtains: list = field(default_factory=list)
     observations: list = field(default_factory=list)
     sources: list = field(default_factory=list)
@@ -58,6 +59,7 @@ class Scene:
             "coordinate_mode": self.coordinate_mode,
             "coordinate_note": self.coordinate_note,
             "coordinate_anchor_latlon": self.coordinate_anchor_latlon,
+            "line_partitions": self.line_partitions,
         }
 
 
@@ -129,6 +131,72 @@ def raw_gps_relative_xy(profile, anchor_latlon):
     return np.c_[east, north]
 
 
+def gps_line_metrics(profile):
+    """Summarize accepted GPS geometry for auditable display partition suggestions."""
+    if "latitude_deg" not in profile or "longitude_deg" not in profile:
+        raise ValueError("GPS line metrics require parsed latitude/longitude")
+    accepted = np.isfinite(profile.latitude_deg.values) & np.isfinite(profile.longitude_deg.values)
+    accepted &= np.isin(profile.position_status.values, ["measured", "interpolated"])
+    if not accepted.any():
+        raise ValueError("GPS line metrics require an accepted position")
+    anchor = [
+        float(np.nanmedian(profile.latitude_deg.values[accepted])),
+        float(np.nanmedian(profile.longitude_deg.values[accepted])),
+    ]
+    xy = raw_gps_relative_xy(profile, anchor)
+    adjacent = accepted[1:] & accepted[:-1]
+    path_length = float(np.linalg.norm(np.diff(xy, axis=0)[adjacent], axis=1).sum())
+    finite_xy = xy[accepted]
+    return {
+        "source_id": profile.attrs["source_id"],
+        "profile_id": profile.attrs["profile_id"],
+        "center_latitude_deg": anchor[0],
+        "center_longitude_deg": anchor[1],
+        "accepted_position_count": int(accepted.sum()),
+        "path_length_m": path_length,
+        "east_span_m": float(np.ptp(finite_xy[:, 0])),
+        "north_span_m": float(np.ptp(finite_xy[:, 1])),
+    }
+
+
+def _line_id(profile):
+    return json.dumps([profile.attrs["source_id"], profile.attrs["profile_id"]])
+
+
+def _scene_partitions(profiles, partitions):
+    available = {_line_id(profile) for profile in profiles}
+    if not partitions:
+        return []
+    resolved, assigned = [], set()
+    for partition in partitions:
+        line_ids = [json.dumps(line) for line in partition["lines"]]
+        selected = [line_id for line_id in line_ids if line_id in available]
+        if not selected:
+            continue
+        assigned.update(selected)
+        resolved.append(
+            {
+                "partition_id": partition["partition_id"],
+                "label": partition["label"],
+                "line_ids": selected,
+                "default_visible": partition["default_visible"],
+            }
+        )
+    unpartitioned = sorted(available - assigned)
+    if unpartitioned:
+        resolved.append(
+            {
+                "partition_id": "unpartitioned",
+                "label": "Unpartitioned lines",
+                "line_ids": unpartitioned,
+                "default_visible": False,
+            }
+        )
+    if resolved and not any(partition["default_visible"] for partition in resolved):
+        resolved[0]["default_visible"] = True
+    return resolved
+
+
 def _features(profile, gates, vertical_axis):
     """Reuse M3 quality rules for each selected gate; never grid display gain."""
     axis = axis_values(profile, vertical_axis)
@@ -169,6 +237,7 @@ def build_scene(
     synthetic=False,
     diagnostic=False,
     gps_diagnostic=False,
+    diagnostic_partitions=(),
 ):
     validate_gates(gates)
     if not profiles:
@@ -288,12 +357,13 @@ def build_scene(
         coordinate_mode=coordinate_mode,
         coordinate_note=coordinate_note,
         coordinate_anchor_latlon=coordinate_anchor,
+        line_partitions=_scene_partitions(profiles, diagnostic_partitions),
         observations=[[] for _ in gates],
         quality={"total_traces": 0, "excluded_positions": 0, "excluded_windows": 0},
     )
     seen_lines, seen_traces = set(), set()
     for profile in profiles:
-        line = json.dumps([profile.attrs["source_id"], profile.attrs["profile_id"]])
+        line = _line_id(profile)
         trace_ids = profile.trace_id.values.astype(str)
         if line in seen_lines or seen_traces.intersection(trace_ids):
             raise ValueError("Duplicate source line or trace identity")
@@ -303,6 +373,7 @@ def build_scene(
             {
                 "source_id": profile.attrs["source_id"],
                 "profile_id": profile.attrs["profile_id"],
+                "line_id": line,
                 "checksums": profile.attrs["source_checksums"],
                 "history": profile.attrs["history"],
                 "assignment": profile.attrs.get("assignment"),

@@ -11,11 +11,12 @@ function payload() {
   const scene = {
     plot_id:'fixture', survey_id:'test-session', crs:'EPSG:32632', origin_xy_m:[500000,6600000],
     diagnostic:false, boundary:[[0,0],[10,0],[10,10],[0,10]], scale_bar_m:10,
+    line_partitions:[],
     quality:{excluded_positions:1, excluded_windows:2},
-    curtains:[{xy:[[0,0],[1,0]],vertical:[0,10],amplitude:[[1,null],[3,4]],
+    curtains:[{line_id:'["source", "a"]',xy:[[0,0],[1,0]],vertical:[0,10],amplitude:[[1,null],[3,4]],
       trace_ids:['source/a:1','source/a:2'],position_status:['measured','interpolated'],quality_flags:[0,256]}],
-    observations:[[{xy:[0,0],value:2,trace_id:'source/a:1',position_status:'measured',quality_flags:0}],
-      [{xy:[1,0],value:3,trace_id:'source/a:2',position_status:'interpolated',quality_flags:256}]],
+    observations:[[{line_id:'["source", "a"]',xy:[0,0],value:2,trace_id:'source/a:1',position_status:'measured',quality_flags:0}],
+      [{line_id:'["source", "a"]',xy:[1,0],value:3,trace_id:'source/a:2',position_status:'interpolated',quality_flags:256}]],
     grid:{x:[.5,1.5],y:[.5,1.5],value:[[[2,null],[2,2]],[[3,3],[null,3]]],
       distance:[[[1,null],[1,1]],[[1,1],[null,1]]],count:[[[3,0],[3,3]],[[3,3],[0,3]]],coverage:[.75,.75]}
   };
@@ -37,7 +38,8 @@ async function setup(data=payload()) {
   element('scene-data').textContent=JSON.stringify(data);
   element('mode').value='single';element('samples').value='all';element('plotSelect').value='0';
   element('exaggeration').value='1';
-  const context={document:{getElementById:element,createElement:()=>({click(){}})},window:{},
+  const context={document:{getElementById:element,createElement:()=>({dataset:{},append(){},click(){},
+    addEventListener(){}})},window:{},
     performance:{now:()=>0},setInterval:()=>1,clearInterval(){},Blob,URL,
     Plotly:{react:async (el,traces,layout,config)=>{renders.push({traces,layout,config,method:'react'});},
       restyle:async (el,updates,indices)=>{
@@ -138,6 +140,30 @@ test('raw GPS diagnostic labels approximate geometry and filters interpolated po
   await s.change('samples','measured');
   const curtain=s.renders.at(-1).traces.find(t=>t.meta?.layer==='curtain');
   assert.equal(curtain.x[0][1],null);
+});
+
+test('diagnostic partitions hide traverses by default and support explicit subsets',async()=>{
+  const data=payload();data.synthetic=false;data.scenes=data.scenes.slice(0,1);
+  const other=structuredClone(data.scenes[0].curtains[0]);
+  other.line_id='["source", "long"]';other.xy=[[100,100],[200,200]];
+  other.trace_ids=['source/long:1','source/long:2'];data.scenes[0].curtains.push(other);
+  Object.assign(data.scenes[0],{diagnostic:true,grid:null,crs:null,
+    coordinate_mode:'raw_gps_relative',line_partitions:[
+      {partition_id:'grid-01',label:'Grid partition 1',default_visible:true,
+        line_ids:['["source", "a"]']},
+      {partition_id:'other-lines',label:'Other / traverse lines',default_visible:false,
+        line_ids:['["source", "long"]']}
+    ]});
+  const s=await setup(data);
+  assert.match(s.controls.get('lineCount').textContent,/1 of 2 lines/);
+  assert.equal(s.renders.at(-1).layout.scene.xaxis.range,undefined);
+  await s.change('lineSubset','partition:other-lines');
+  const curtain=s.renders.at(-1).traces.find(t=>t.meta?.layer==='curtain');
+  assert.equal(curtain.customdata[0][0][0],'source/long:1');
+  assert.match(s.controls.get('status').textContent,/1 of 2 lines visible/);
+  await s.change('lineSubset','custom');
+  const custom=s.renders.at(-1).traces.find(t=>t.meta?.layer==='curtain');
+  assert.equal(custom.customdata[0][0][0],'source/long:1');
 });
 
 test('combined curtains and tracks keep explicit gaps and trace identity',async()=>{

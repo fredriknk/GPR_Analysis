@@ -244,6 +244,14 @@ a datum, projected CRS, positional accuracy, plot assignment or geographic grid.
 Reviewed plot/session scenes and their comparison overview remain capped at four
 independent frames.
 
+GPS diagnostic metadata can define exact source/profile display partitions. The
+viewer offers the default partition union, all lines, each partition, an
+other/traverse group and an individual line checklist. Filtering applies to
+tracks, quantitative curtains and measured gate points. Visible bounds and the
+scale bar are recomputed from the chosen lines, and saved views retain custom line
+sets. This is display selection only; quantitative stores and source identity are
+unchanged.
+
 Field scenes require existing quantitative stores and reviewed assignments and
 geometry. RMS is re-extracted through the M3 function rather than trusting an
 unverified external feature table. Depth gates select existing calibrated samples,
@@ -345,13 +353,20 @@ curtain vertices and a 30,195,154-byte payload.
 The current raw-GPS run combines recorded lines by proximity rather than assigning
 them to production plots. It found three disconnected sites at the configured
 1,000 m threshold: a 72-line main grid and remote five-line and three-line groups.
-The three-scene viewer contains 219,555 rendered curtain vertices and a 31,444,953-
-byte payload; the final viewer build took 40.0 seconds. The underlying 16,693,500
-samples remain in exact-round-trip quantitative stores. All 67 Python tests, eight
+The three-scene viewer contains 219,555 rendered curtain vertices and a 31,456,574-
+byte payload; the final viewer build took 44.4 seconds. The underlying 16,693,500
+samples remain in exact-round-trip quantitative stores. All 68 Python tests, nine
 Node controller tests and Ruff pass with the same viewer code.
 
 The current completed output is
-`outputs/real-data-3d-gps-grid-2026-10-20-viewer-final/index.html`. It is diagnostic only:
+`outputs/real-data-3d-grid-partitions-2026-10-20/viewer-final/index.html`. It is diagnostic only:
 relative raw-GPS placement is approximate, and geographic interpolation, depth
 calibration and soil-property inference are disabled. Full run evidence and commands are in
 [real_data_results.md](real_data_results.md).
+
+Within the 72-line scene, the recorded geometry yields a 34-line partition and a
+22-line partition under the documented 15 m line-length, 20 m centre-linkage and
+four-line minimum thresholds. The 16 remaining main-site traverses are available
+but hidden by default. Actual WebGL review verified the combined 56-line default,
+both individual partitions and the complete per-line checklist without browser
+warnings or errors.

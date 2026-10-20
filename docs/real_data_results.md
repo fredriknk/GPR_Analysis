@@ -90,7 +90,7 @@ The current M4.5 diagnostic run positions all curtains from accepted raw NMEA
 coordinates and groups profile centres that are connected within 1,000 m. The
 verified local explorer is:
 
-`outputs/real-data-3d-gps-grid-2026-10-20-viewer-final/index.html`
+`outputs/real-data-3d-grid-partitions-2026-10-20/viewer-final/index.html`
 
 The 80 profiles are not one continuous grid. They form three disconnected scenes:
 the main 72-line acquisition, a five-line site near 60.46206° N / 10.61554° E and
@@ -102,9 +102,12 @@ relative position within its site.
 The run retains 66,774 traces and 16,693,500 full-resolution signed amplitude
 samples. Its GPS audit contains 65,971 measured, nine interpolated, 758 missing and
 36 rejected positions. Browser geometry uses every twentieth trace and every fourth
-time sample, producing 219,555 curtain vertices and a 31,444,953-byte payload.
-The final viewer build took 40.0 seconds. The main grid opens first in the browser
-review and contains 72 source profiles in one rotatable scene.
+time sample, producing 219,555 curtain vertices and a 31,456,574-byte payload.
+The final viewer build took 44.4 seconds. The main site opens first. Its 72 source
+profiles are split into two compact grid partitions of 34 and 22 lines, plus 16
+miscellaneous/traverse lines. The default view shows the 56 grid lines and hides
+the traverses. Either partition, all lines, the traverse set or any custom checkbox
+selection can be displayed; the 3D bounds and scale bar refit to the chosen lines.
 
 Coordinates are approximate small-area east/north offsets from a recorded
 latitude/longitude anchor. The source did not establish a reviewed datum, projected
@@ -120,8 +123,14 @@ Reproduce the combined layout in a new output directory:
 
 The all-data run saves and exactly reopens every quantitative Zarr store. The final
 viewer independently hashes those 80 stores and verifies its artifacts, clustering
-threshold and coordinate warning. All 67 Python tests, eight Node controller tests
+threshold and coordinate warning. All 68 Python tests, nine Node controller tests
 and Ruff pass.
+
+The display partitions are suggested from filenames and recorded geometry: only
+`XLINE`/`YLINE` profiles no longer than 15 m are candidates, centres link within
+20 m, and a component needs at least four lines. These thresholds and per-line GPS
+metrics are stored in the run manifest and collection summary. The labels are
+diagnostic partitions, not production plots or scientific sampling units.
 
 ## Initial all-recording odometer 3D viewer
 

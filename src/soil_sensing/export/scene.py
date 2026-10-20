@@ -61,6 +61,7 @@ def load_scene_config(path: Path):
         "diagnostic",
         "diagnostic_layout",
         "diagnostic_cluster_distance_m",
+        "diagnostic_partitions",
         "profiles",
         "plots_file",
         "vertical_axis",
@@ -107,7 +108,42 @@ def load_scene_config(path: Path):
     if not synthetic and not diagnostic and not data.get("plots_file"):
         raise ValueError("Plot scenes require plots_file with reviewed geometry")
     if diagnostic and (data.get("plots_file") or data.get("exclusions") or data.get("regions")):
-        raise ValueError("Diagnostic odometer scenes cannot use geographic plot geometry")
+        raise ValueError("Diagnostic scenes cannot use geographic plot geometry")
+    partitions = data.get("diagnostic_partitions", [])
+    if not isinstance(partitions, list):
+        raise ValueError("diagnostic_partitions must be a list of tables")
+    if partitions and (not diagnostic or diagnostic_layout != "gps"):
+        raise ValueError("diagnostic_partitions require diagnostic GPS layout")
+    partition_ids, partition_lines = set(), set()
+    for partition in partitions:
+        if not isinstance(partition, dict) or set(partition) != {
+            "partition_id",
+            "label",
+            "default_visible",
+            "lines",
+        }:
+            raise ValueError("Each diagnostic partition requires id, label, visibility and lines")
+        if (
+            not isinstance(partition["partition_id"], str)
+            or not partition["partition_id"]
+            or partition["partition_id"] in partition_ids
+            or not isinstance(partition["label"], str)
+            or not partition["label"]
+            or type(partition["default_visible"]) is not bool
+            or not isinstance(partition["lines"], list)
+            or not partition["lines"]
+        ):
+            raise ValueError("Invalid diagnostic partition metadata")
+        partition_ids.add(partition["partition_id"])
+        for line in partition["lines"]:
+            if (
+                not isinstance(line, list)
+                or len(line) != 2
+                or any(not isinstance(value, str) or not value for value in line)
+                or tuple(line) in partition_lines
+            ):
+                raise ValueError("Diagnostic partition lines must be unique source/profile pairs")
+            partition_lines.add(tuple(line))
     if data.get("vertical_axis", "recording_time") not in (
         "recording_time",
         "corrected_time",
@@ -138,6 +174,7 @@ def load_scene_config(path: Path):
     data["profiles"] = resolved
     data["diagnostic_layout"] = diagnostic_layout
     data["diagnostic_cluster_distance_m"] = float(cluster_distance)
+    data["diagnostic_partitions"] = partitions
     if data.get("plots_file"):
         data["plots_file"] = (path.parent / data["plots_file"]).resolve()
     return data, GridOptions(**data.get("grid", {})), RenderOptions(**data.get("render", {}))
@@ -166,6 +203,80 @@ def _gps_distance_m(left, right):
             (left[1] - right[1]) * 111_320.0 * np.cos(latitude),
         )
     )
+
+
+def suggest_diagnostic_partitions(
+    lines, *, max_line_length_m=15.0, center_distance_m=20.0, min_lines=4
+):
+    """Suggest short, dense line groups for diagnostic display, never plot identity."""
+    if (
+        not np.isfinite(max_line_length_m)
+        or max_line_length_m <= 0
+        or not np.isfinite(center_distance_m)
+        or center_distance_m <= 0
+        or type(min_lines) is not int
+        or min_lines < 2
+    ):
+        raise ValueError("Diagnostic partition limits must be finite and positive")
+    candidates = [
+        index
+        for index, line in enumerate(lines)
+        if Path(line["profile_id"]).name.upper().startswith(("XLINE", "YLINE"))
+        and line["path_length_m"] <= max_line_length_m
+    ]
+    unseen, components = set(candidates), []
+    while unseen:
+        seed = min(unseen)
+        unseen.remove(seed)
+        indices, frontier = {seed}, [seed]
+        while frontier:
+            left = frontier.pop()
+            left_center = (
+                lines[left]["center_latitude_deg"],
+                lines[left]["center_longitude_deg"],
+            )
+            neighbours = set()
+            for right in unseen:
+                right_center = (
+                    lines[right]["center_latitude_deg"],
+                    lines[right]["center_longitude_deg"],
+                )
+                if _gps_distance_m(left_center, right_center) <= center_distance_m:
+                    neighbours.add(right)
+            unseen -= neighbours
+            indices |= neighbours
+            frontier.extend(neighbours)
+        if len(indices) >= min_lines:
+            components.append(sorted(indices))
+    components.sort(key=lambda group: (-len(group), group[0]))
+    partitions, assigned = [], set()
+    for number, group in enumerate(components, 1):
+        assigned.update(group)
+        partitions.append(
+            {
+                "partition_id": f"grid-{number:02d}",
+                "label": f"Grid partition {number}",
+                "default_visible": True,
+                "lines": [
+                    [lines[index]["source_id"], lines[index]["profile_id"]] for index in group
+                ],
+            }
+        )
+    other = [
+        [line["source_id"], line["profile_id"]]
+        for index, line in enumerate(lines)
+        if index not in assigned
+    ]
+    if other:
+        partitions.append(
+            {
+                "partition_id": "other-lines",
+                "label": "Other / traverse lines",
+                "default_visible": False,
+                "lines": other,
+            }
+        )
+    return partitions
 
 
 def _gps_diagnostic_groups(profiles, cluster_distance_m):
@@ -308,6 +419,13 @@ def visualize_run(config_path: Path, output: Path, *, progress=None):
             if not config.get("diagnostic"):
                 key = (profile.attrs["plot_id"], profile.attrs["survey_id"])
                 groups.setdefault(key, []).append(profile)
+        configured_partition_lines = {
+            tuple(line)
+            for partition in config["diagnostic_partitions"]
+            for line in partition["lines"]
+        }
+        if configured_partition_lines - identities:
+            raise ValueError("Diagnostic partitions reference an unselected source profile")
         if config.get("diagnostic"):
             diagnostic_groups = (
                 _gps_diagnostic_groups(profiles, config["diagnostic_cluster_distance_m"])
@@ -360,6 +478,7 @@ def visualize_run(config_path: Path, output: Path, *, progress=None):
                 synthetic=config.get("synthetic", False),
                 diagnostic=config.get("diagnostic", False),
                 gps_diagnostic=config.get("diagnostic_layout") == "gps",
+                diagnostic_partitions=config["diagnostic_partitions"],
             )
             actual_vertices = sum(len(c["xy"]) * len(c["vertical"]) for c in scene.curtains)
             rendered_vertices += actual_vertices

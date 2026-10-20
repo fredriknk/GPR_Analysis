@@ -116,6 +116,13 @@ hash inputs, renderer assets and grids. Metadata preflight limits input sample,
 measurement and curtain counts before field amplitudes are loaded; further grid
 and payload budgets fail explicitly. No volume renderer or server is required.
 
+GPS diagnostic scenes may carry explicit display partitions keyed by exact
+`source_id` / `profile_id` pairs. The all-data runner suggests dense short-line
+components using recorded geometry and stores its thresholds and per-line metrics.
+The browser filters tracks, curtains and observations by partition or individual
+line and recomputes the visible bounds. Partition metadata remains a review aid;
+it is not plot assignment evidence and never enters quantitative interpolation.
+
 ### Adding another sensor later
 
 Use the implemented observation adapter registry keyed by format ID for tabular

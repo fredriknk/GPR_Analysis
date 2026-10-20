@@ -20,7 +20,11 @@ if HAS_VISUALIZATION:
     import numpy as np
     import xarray as xr
 
-    from soil_sensing.export.scene import load_scene_config, visualize_run
+    from soil_sensing.export.scene import (
+        load_scene_config,
+        suggest_diagnostic_partitions,
+        visualize_run,
+    )
     from soil_sensing.ingest import tree_hash
     from soil_sensing.io.storage import save_profile
     from soil_sensing.processing.depth import VelocityCalibration, add_depth_axis
@@ -36,7 +40,7 @@ if HAS_VISUALIZATION:
         interpolate_support,
         validate_grid,
     )
-    from soil_sensing.visualization.scene import build_scene, validate_gates
+    from soil_sensing.visualization.scene import build_scene, gps_line_metrics, validate_gates
     from soil_sensing.visualization.synthetic import synthetic_plots
 
 BOUNDARY = [[0, 0], [10, 0], [10, 10], [0, 10]]
@@ -255,6 +259,17 @@ class SceneTests(unittest.TestCase):
             [[30, 40]],
             diagnostic=True,
             gps_diagnostic=True,
+            diagnostic_partitions=[
+                {
+                    "partition_id": "grid-test",
+                    "label": "Grid test",
+                    "default_visible": True,
+                    "lines": [
+                        [profile.attrs["source_id"], profile.attrs["profile_id"]]
+                        for profile in profiles
+                    ],
+                }
+            ],
             trace_step=8,
             sample_step=8,
         )
@@ -264,6 +279,36 @@ class SceneTests(unittest.TestCase):
         self.assertGreaterEqual(len(scene.curtains), 2)
         self.assertIn("datum, CRS", scene.coordinate_note)
         self.assertEqual(len(scene.coordinate_anchor_latlon), 2)
+        self.assertEqual(scene.line_partitions[0]["partition_id"], "grid-test")
+        self.assertTrue(scene.line_partitions[0]["default_visible"])
+        self.assertGreater(gps_line_metrics(profiles[0])["path_length_m"], 0)
+
+    def test_diagnostic_partition_suggestions_separate_dense_short_grids(self):
+        lines = []
+        for group, latitude, count in (("a", 59.66, 4), ("b", 59.661, 4)):
+            for index in range(count):
+                lines.append(
+                    {
+                        "source_id": "demo",
+                        "profile_id": f"{group}/XLINE{index:02d}",
+                        "center_latitude_deg": latitude,
+                        "center_longitude_deg": 10.75 + index * 0.00001,
+                        "path_length_m": 10.0,
+                    }
+                )
+        lines.append(
+            {
+                "source_id": "demo",
+                "profile_id": "a/LINE99",
+                "center_latitude_deg": 59.66,
+                "center_longitude_deg": 10.75,
+                "path_length_m": 200.0,
+            }
+        )
+        partitions = suggest_diagnostic_partitions(lines)
+        self.assertEqual([len(partition["lines"]) for partition in partitions], [4, 4, 1])
+        self.assertEqual(partitions[-1]["partition_id"], "other-lines")
+        self.assertFalse(partitions[-1]["default_visible"])
 
     def test_calibrated_depth_retains_uncertainty_and_rejects_missing_evidence(self):
         profile = self.profiles[0].copy(deep=True)
@@ -470,13 +515,19 @@ class ExplorerRunTests(unittest.TestCase):
                 'schema_version="0.1"\ndiagnostic=true\ndiagnostic_layout="gps"\n'
                 "diagnostic_cluster_distance_m=1000\nprofiles=["
                 + ",".join(json.dumps(store) for store in stores)
-                + "]\ngates=[[30,40]]\n[render]\ntrace_step=8\nsample_step=8\n"
+                + "]\ngates=[[30,40]]\n"
+                '[[diagnostic_partitions]]\npartition_id="grid-test"\nlabel="Grid test"\n'
+                "default_visible=true\n"
+                'lines=[["synthetic-demo-v1","gps-cluster-line-0"],'
+                '["synthetic-demo-v1","gps-cluster-line-1"]]\n'
+                "[render]\ntrace_step=8\nsample_step=8\n"
             )
             output = root / "gps-viewer"
             result = visualize_run(config, output)
             self.assertEqual(result["scene_count"], 2)
             scene = json.loads((output / "scene.json").read_text())
             self.assertEqual(len(scene["scenes"][0]["source_profiles"]), 2)
+            self.assertEqual(scene["scenes"][0]["line_partitions"][0]["label"], "Grid test")
             self.assertEqual(
                 sorted(len(item["source_profiles"]) for item in scene["scenes"]), [1, 2]
             )

@@ -219,6 +219,15 @@ Explicit `synthetic=true` scenes use the versioned deterministic generator, with
 synthetic evidence/units and a visible demo badge. These modes cannot borrow field
 geometry implicitly. Extra sensors and soil predictions are not synthesized.
 
+Optional `diagnostic_partitions` contain a unique `partition_id`, display `label`,
+`default_visible` Boolean and nonempty `lines` list of exact `[source_id,
+profile_id]` pairs. A line can occur in only one partition, and every reference
+must be among the selected input stores. Scene metadata resolves each partition
+to canonical JSON `line_id` values. Unlisted lines remain explicitly
+`unpartitioned`; if a scene has no default-visible partition, its first available
+partition is shown so a remote site never opens empty. View JSON can preserve a
+custom set of selected line IDs.
+
 `evaluation.json` records each whole held-out line, training line count, held-out
 and supported counts/fraction, and candidate/baseline MAE, RMSE and bias in the
 attribute unit. Unsupported folds have null errors. Binning and triangulation

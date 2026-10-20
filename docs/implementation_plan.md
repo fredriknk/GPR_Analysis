@@ -211,6 +211,14 @@ run on 2026-10-20 grouped all 80 profiles into three spatially separate scenes:
 the browser used 219,555 decimated curtain vertices. No texture inference or
 extra sensor adapter was invented.
 
+Follow-up on 2026-10-20: the main 72-line GPS scene now exposes two compact
+display partitions (34 and 22 lines) and hides its 16 miscellaneous/traverse lines
+by default. The two other site scenes retain their five and three lines. A line
+subset menu, individual checkboxes, all/none actions, saved-view line selection
+and selection-relative camera bounds were browser-reviewed on the real data.
+Partition suggestions use recorded line length and centre proximity with explicit
+configurable thresholds; they do not establish production plot identities.
+
 ## M5 — Calibrated texture inference (software implemented; field validation pending)
 
 Dependencies: M4 and enough independent, representative texture reference samples.

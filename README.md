@@ -198,6 +198,15 @@ pass `--layout odometer` to retain one independent scene per line. Its output is
 local and ignored by Git. See [real_data_results.md](docs/real_data_results.md)
 for the verified run.
 
+For GPS diagnostics, the runner also suggests display-only grid partitions from
+short `XLINE`/`YLINE` groups with nearby recorded centres. The default thresholds
+are 15 m maximum line length, 20 m centre linkage and at least four lines; override
+them with `--grid-line-max-length-m`, `--grid-partition-distance-m` and
+`--grid-partition-min-lines`. These groups do not assign plots. The viewer opens
+with grid partitions only, offers each partition and the other/traverse lines as
+presets, and provides an individual line checklist. Camera bounds and the metric
+scale bar follow the visible lines.
+
 The exporter writes `scene.json`, `evaluation.json`, `run.json`, and per-scene
 `scene-01/grid.zarr` / `support.json` (no grids for diagnostic lines). Nearest and
 linear estimates share hull, polygon, full-triangle, gap and contributor-distance

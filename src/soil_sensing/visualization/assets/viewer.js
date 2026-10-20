@@ -11,6 +11,78 @@ let desired = 0, rendered = -1, initialized = false;
 let lastViewSignature = null, lastGate = null;
 const metrics = {renders:[], startup_ms:null};
 window.explorerMetrics = metrics;
+const lineStates = new Map();
+function sceneLineIds(s){return [...new Set(s.curtains.map(c=>c.line_id))]}
+function defaultLineIds(s){
+  const defaults=(s.line_partitions||[]).filter(p=>p.default_visible).flatMap(p=>p.line_ids);
+  return defaults.length?defaults:sceneLineIds(s);
+}
+function lineState(s){
+  const index=data.scenes.indexOf(s);
+  if(!lineStates.has(index)){
+    const partitioned=(s.line_partitions||[]).length>0;
+    lineStates.set(index,{selected:new Set(defaultLineIds(s)),preset:partitioned?'default':'all'});
+  }
+  return lineStates.get(index);
+}
+function lineName(lineId){try{return JSON.parse(lineId)[1]}catch{return lineId}}
+function addOption(select,value,label){
+  const option=document.createElement('option');option.value=value;option.textContent=label;select.append(option);
+}
+function updateLineCount(s){
+  const state=lineState(s),total=sceneLineIds(s).length;
+  $('lineCount').textContent=state.selected.size+' of '+total+' lines visible';
+}
+function populateLineControls(index){
+  const s=data.scenes[index],state=lineState(s),all=sceneLineIds(s),select=$('lineSubset');
+  select.textContent='';
+  if((s.line_partitions||[]).length){
+    const gridDefault=(s.line_partitions||[]).some(p=>p.default_visible&&p.partition_id.startsWith('grid-'));
+    addOption(select,'default',(gridDefault?'Grid partitions only':'Default line set')+
+      ' · '+defaultLineIds(s).length+' lines');
+  }
+  addOption(select,'all','All lines · '+all.length);
+  for(const partition of s.line_partitions||[])addOption(select,'partition:'+partition.partition_id,
+    partition.label+' · '+partition.line_ids.length+' lines');
+  addOption(select,'custom','Custom selection');select.value=state.preset;
+  const list=$('lineList');list.textContent='';
+  for(const lineId of all){
+    const label=document.createElement('label'),input=document.createElement('input');
+    const text=document.createElement('span');input.type='checkbox';input.checked=state.selected.has(lineId);
+    input.dataset.lineId=lineId;text.textContent=lineName(lineId);label.append(input,text);list.append(label);
+    input.addEventListener('change',()=>{
+      if(input.checked)state.selected.add(lineId);else state.selected.delete(lineId);
+      state.preset='custom';select.value='custom';updateLineCount(s);render();
+    });
+  }
+  updateLineCount(s);
+}
+function applyLinePreset(s,preset){
+  const state=lineState(s),all=sceneLineIds(s);
+  let selected=all;
+  if(preset==='default')selected=defaultLineIds(s);
+  else if(preset==='custom')selected=[...state.selected];
+  else if(preset.startsWith('partition:')){
+    const id=preset.slice('partition:'.length);
+    selected=(s.line_partitions||[]).find(p=>p.partition_id===id)?.line_ids||[];
+  }
+  state.selected=new Set(selected);state.preset=preset;populateLineControls(data.scenes.indexOf(s));
+}
+function visibleCurtains(s){const selected=lineState(s).selected;return s.curtains.filter(c=>selected.has(c.line_id))}
+function visibleBoundary(s){
+  if(s.coordinate_mode!=='raw_gps_relative')return s.boundary;
+  const points=visibleCurtains(s).flatMap(c=>c.xy).filter(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]));
+  if(!points.length)return s.boundary;
+  const xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
+  const lower=[Math.min(...xs),Math.min(...ys)],upper=[Math.max(...xs),Math.max(...ys)];
+  const pad=Math.max(1,.04*Math.max(upper[0]-lower[0],upper[1]-lower[1]));
+  return [[lower[0]-pad,lower[1]-pad],[upper[0]+pad,lower[1]-pad],
+    [upper[0]+pad,upper[1]+pad],[lower[0]-pad,upper[1]+pad]];
+}
+function scaleBarLength(boundary){
+  const width=Math.max(...boundary.map(p=>p[0]))-Math.min(...boundary.map(p=>p[0])),target=width/4;
+  return [1,2,5,10,20,50,100].filter(value=>value<=target).at(-1)||1;
+}
 data.scenes.forEach((s,i)=>{let o=document.createElement('option');o.value=i;
 o.textContent=s.plot_id+' / '+(s.survey_id||'session unknown');$('plotSelect').append(o)});
 $('slice').max=data.gates.length-1;
@@ -27,15 +99,14 @@ function layers(s, scene, gate, overview){
   const hover=(gps?'Approx. east offset':'East')+' %{x:.1f} m · '+
     (gps?'approx. north offset':'North')+' %{y:.1f} m<extra></extra>';
   if($('boundary').checked){
-    const b=[...s.boundary,s.boundary[0]];
+    const boundary=visibleBoundary(s),b=[...boundary,boundary[0]],bar=scaleBarLength(boundary);
     out.push(trace(scene,'scatter3d',{mode:'lines',x:b.map(p=>p[0]),y:b.map(p=>p[1]),z:b.map(()=>0),
       line:{color:'#8295a7',width:3},hovertemplate:hover}));
-    // Explicit 20 m scale bar in local metric coordinates.
-    const a=s.boundary[0];out.push(trace(scene,'scatter3d',{mode:'lines+text',
-      x:[a[0],a[0]+s.scale_bar_m],y:[a[1],a[1]],z:[0,0],text:['',s.scale_bar_m+' m'],
+    const a=boundary[0];out.push(trace(scene,'scatter3d',{mode:'lines+text',
+      x:[a[0],a[0]+bar],y:[a[1],a[1]],z:[0,0],text:['',bar+' m'],
       textposition:'top center',line:{color:'#e8f1f7',width:5},hoverinfo:'skip'}));
   }
-  if(!overview){for(const c of s.curtains){
+  if(!overview){for(const c of visibleCurtains(s)){
     const allowed=c.position_status.map(v=>$('samples').value==='all'||v==='measured'||
       s.coordinate_mode==='odometer');
     const x=c.xy.map((p,i)=>allowed[i]?p[0]:null), y=c.xy.map((p,i)=>allowed[i]?p[1]:null);
@@ -73,8 +144,9 @@ function layers(s, scene, gate, overview){
         '<br>Gate '+data.gates[gate].join('–')+' '+data.gate_unit+'<extra></extra>'
     }));
   }
-  if($('measured').checked){const rows=s.observations[gate].filter(r=>
-    $('samples').value==='all'||r.position_status==='measured'||s.coordinate_mode==='odometer');
+  if($('measured').checked){const selected=lineState(s).selected,rows=s.observations[gate].filter(r=>
+    selected.has(r.line_id)&&($('samples').value==='all'||r.position_status==='measured'||
+      s.coordinate_mode==='odometer'));
     out.push(trace(scene,'scatter3d',{meta:{layer:'measured'},mode:'markers',x:rows.map(r=>r.xy[0]),y:rows.map(r=>r.xy[1]),
       z:rows.map(()=>-mid),customdata:rows.map(r=>[r.trace_id,r.position_status,r.quality_flags,r.time_utc]),
       marker:{size:3,color:rows.map(r=>r.value),cmin:0,cmax:data.rms_limit,colorscale:'Viridis',
@@ -100,7 +172,7 @@ function layers(s, scene, gate, overview){
 }
 function sceneLayout(s,domain){const ns=data.gate_unit==='ns';
   const end=Math.max(data.gates.at(-1)[1],...s.curtains.map(c=>c.vertical.at(-1)));
-  const xy=s.boundary, xs=xy.map(p=>p[0]),ys=xy.map(p=>p[1]);
+  const xy=visibleBoundary(s), xs=xy.map(p=>p[0]),ys=xy.map(p=>p[1]);
   const w=Math.max(...xs)-Math.min(...xs),h=Math.max(...ys)-Math.min(...ys),scale=Math.max(w,h,1);
   const factor=Number($('exaggeration').value)||1;
   return {domain,camera,uirevision:cameraRevision,aspectmode:'manual',aspectratio:{x:w/scale,y:Math.max(h/scale,.1),
@@ -147,12 +219,14 @@ async function render(){
         xref:'paper',yref:'paper',yshift:18,showarrow:false,font:{color:'#75e3c2'}});
     });
     const s=data.scenes[selected], g=s.grid;
+    const selectedLines=lineState(s).selected,allLines=sceneLineIds(s);
     $('interval').textContent=(data.vertical_axis==='depth'?'Depth':
       data.vertical_axis==='corrected_time'?'Corrected time':'Recording time')+' · '+
       data.gates[gate].join(' – ')+' '+data.gate_unit;
     $('metric').textContent='Quantitative RMS · '+data.attribute_unit;
     ['top','oblique','side','reset','exaggeration'].forEach(id=>$(id).disabled=overview);
     $('status').textContent=(overview?'Plan overview · independent local coordinates · shared scale. Select a plot for 3D rotation. ':'')+
+      selectedLines.size+' of '+allLines.length+' lines visible. '+
       (s.coordinate_mode==='raw_gps_relative'?
         'Approximate layout from raw NMEA coordinates; datum/CRS unverified; no geographic grid. ':
         s.diagnostic?'Diagnostic odometer coordinates; no geographic grid. ':
@@ -162,12 +236,13 @@ async function render(){
       s.quality.excluded_positions+' positions excluded · '+s.quality.excluded_windows+' signal windows excluded. '+
       (g?'Supported slice '+(100*g.coverage[gate]).toFixed(1)+'% · '+data.method+'. ':'')+
       'GPS position filtering changes measured layers only; grids retain saved support.';
-    $('empty').textContent=!g?(s.coordinate_mode==='raw_gps_relative'?
+    $('empty').textContent=!selectedLines.size?'No lines selected. Choose a partition or individual lines.':
+      !g?(s.coordinate_mode==='raw_gps_relative'?
       'Recorded GPS line layout; gridding requires reviewed datum, CRS and plot geometry.':
       'Measured line review; gridding requires reviewed plot geometry.'):
       !g.coverage[gate]?'No supported surface in this gate. Measured tracks and curtains remain available.':'';
     const viewSignature=JSON.stringify([selected,overview,$('samples').value,
-      $('exaggeration').value,...toggles.map(id=>$(id).checked)]);
+      $('exaggeration').value,...[...selectedLines].sort(),...toggles.map(id=>$(id).checked)]);
     try{
       if(initialized && lastViewSignature===viewSignature && lastGate!==gate){
         const surfaceIds=traces.flatMap((t,i)=>t.meta?.layer==='slice'?[i]:[]);
@@ -198,13 +273,23 @@ async function render(){
     rendered=revision;
   }busy=false;
 }
-['plotSelect','mode','samples','exaggeration',...toggles].forEach(id=>$(id).addEventListener('change',render));
+$('plotSelect').addEventListener('change',()=>{populateLineControls(Number($('plotSelect').value));render()});
+$('lineSubset').addEventListener('change',()=>{
+  applyLinePreset(data.scenes[Number($('plotSelect').value)],$('lineSubset').value);render();
+});
+$('lineAll').onclick=()=>{const s=data.scenes[Number($('plotSelect').value)];applyLinePreset(s,'all');render()};
+$('lineNone').onclick=()=>{
+  const s=data.scenes[Number($('plotSelect').value)],state=lineState(s);
+  state.selected=new Set();state.preset='custom';populateLineControls(data.scenes.indexOf(s));render();
+};
+['mode','samples','exaggeration',...toggles].forEach(id=>$(id).addEventListener('change',render));
 $('slice').addEventListener('input',render);
 $('play').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('play').textContent='Play slices';return;}
   $('play').textContent='Pause';timer=setInterval(()=>{if(!busy){$('slice').value=(Number($('slice').value)+1)%data.gates.length;render();}},700);};
 ['top','oblique','side','reset'].forEach(id=>$(id).onclick=()=>{camera=cameras[id==='reset'?'oblique':id];cameraRevision++;render()});
 $('save').onclick=()=>{const state={schema_version:'0.1',scene_id:data.scene_id,camera,
   plot:Number($('plotSelect').value),mode:$('mode').value,gate:Number($('slice').value),
+  lines:[...lineState(data.scenes[Number($('plotSelect').value)]).selected],
   position_support:$('samples').value,vertical_factor:Number($('exaggeration').value),
   layers:Object.fromEntries(toggles.map(id=>[id,$(id).checked])),
   scales:{amplitude_limit:data.amplitude_limit,rms_limit:data.rms_limit},
@@ -217,8 +302,14 @@ $('restore').onchange=async e=>{try{const s=JSON.parse(await e.target.files[0].t
     !['single','overview'].includes(s.mode)||!['all','measured'].includes(s.position_support)||
     !(s.vertical_factor>=.1&&s.vertical_factor<=5)||!s.camera?.eye)throw Error('Incompatible view file');
   if(s.mode==='overview'&&$('mode').options[1].disabled)throw Error('Overview unavailable for diagnostic lines');
+  const available=new Set(sceneLineIds(data.scenes[s.plot]));
+  if(s.lines!==undefined&&(!Array.isArray(s.lines)||s.lines.some(line=>!available.has(line))))
+    throw Error('View file references unavailable lines');
   camera=s.camera;cameraRevision++;$('plotSelect').value=s.plot;$('slice').value=s.gate;$('mode').value=s.mode;
   $('samples').value=s.position_support;$('exaggeration').value=s.vertical_factor;
+  if(s.lines!==undefined)lineStates.set(s.plot,{selected:new Set(s.lines),preset:'custom'});
+  populateLineControls(s.plot);
   toggles.forEach(id=>$(id).checked=!!s.layers[id]);render();
 }catch(error){$('empty').textContent=error.message;}};
+populateLineControls(0);
 render();
