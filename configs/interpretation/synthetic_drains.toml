@@ -1,0 +1,21 @@
+schema_version = "1.0"
+kind = "drainage"
+synthetic = true
+partition_id = "grid-01"
+
+[drainage]
+aperture_m = 4.0
+curvature_ns_per_m = 10.0
+wavelet_width_ns = 1.5
+minimum_correlation = 0.5
+minimum_shape_advantage = 0.08
+maximum_residual_ns = 2.0
+minimum_traces = 5
+max_plan_distance_m = 16.0
+max_time_difference_ns = 4.0
+minimum_crossings = 3
+symbolic_radius_m = 0.2
+
+[map]
+footprint_radius_m = 2.0
+gate_bounds_ns = [[20.0, 40.0]]

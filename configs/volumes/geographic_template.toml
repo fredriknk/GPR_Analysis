@@ -1,0 +1,17 @@
+# Unfilled field template. Reviewed geometry/assignments/datum are mandatory.
+schema_version = "1.0"
+synthetic = false
+coordinate_mode = "projected"
+vertical_axis = "recording_time"
+plots_file = "../plots/four_plots.toml"
+profiles = []
+partitions = []
+position_policy = "accepted"
+direction_policy = "separate"
+
+[grid]
+spacing_m = 1.0
+bin_m = 1.0
+max_distance_m = 5.0
+max_edge_m = 8.0
+max_cells = 2000000

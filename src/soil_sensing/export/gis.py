@@ -20,6 +20,79 @@ from soil_sensing.runs import begin_run, finish_run
 from soil_sensing.spatial.interpolation import validate_grid
 
 
+def metric_grid_transform(x, y, spacing, origin, crs):
+    """Shared north-up affine validation for geographic scientific products."""
+    parsed = CRS.from_user_input(crs)
+    if not parsed.is_projected or any(
+        a.unit_name.lower() not in ("metre", "meter") for a in parsed.axis_info[:2]
+    ):
+        raise ValueError("GIS export requires a reviewed projected metric CRS")
+    if spacing is None or not np.isfinite(spacing) or spacing <= 0:
+        raise ValueError("GIS export requires explicit positive spacing")
+    for axis in (x, y):
+        if (
+            not len(axis)
+            or not np.isfinite(axis).all()
+            or (len(axis) > 1 and not np.allclose(np.diff(axis), spacing, rtol=0, atol=1e-8))
+        ):
+            raise ValueError("Nonuniform coordinates require explicit resampling")
+    if len(origin) != 2 or not np.isfinite(origin).all():
+        raise ValueError("Invalid world origin")
+    return from_origin(
+        origin[0] + x[0] - spacing / 2, origin[1] + y[-1] + spacing / 2, spacing, spacing
+    )
+
+
+def write_numeric_raster(path, values, *, x, y, metadata, unit, tags=None):
+    """Write numerical float64 values, preserve NaNs and verify reopened pixels."""
+    if metadata.get("coordinate_mode") != "projected" or not metadata.get("geometry_evidence"):
+        raise ValueError("Geographic export unavailable: reviewed datum/CRS and geometry required")
+    transform = metric_grid_transform(
+        x, y, metadata["grid_options"]["spacing_m"], metadata["origin_xy_m"], metadata["crs"]
+    )
+    data = np.asarray(values, dtype=np.float64)
+    if data.ndim == 2:
+        data = data[None]
+    if data.shape[1:] != (len(y), len(x)):
+        raise ValueError("Raster dimensions disagree with coordinate lattice")
+    data = np.flip(data, axis=1)
+    with rasterio.open(
+        path,
+        "w",
+        driver="GTiff",
+        height=len(y),
+        width=len(x),
+        count=len(data),
+        dtype="float64",
+        crs=metadata["crs"],
+        transform=transform,
+        nodata=np.nan,
+        compress="deflate",
+    ) as target:
+        target.write(data)
+        target.update_tags(
+            AREA_OR_POINT="Area",
+            unit=unit,
+            vertical_axis=metadata["vertical_axis"],
+            selection_hash=metadata["selection_hash"],
+            partition_id=metadata["partition_id"],
+            synthetic=str(metadata.get("synthetic", False)).lower(),
+            **(tags or {}),
+        )
+    with rasterio.open(path) as restored:
+        np.testing.assert_array_equal(restored.read(), data)
+        if restored.transform != transform or restored.crs != rasterio.crs.CRS.from_user_input(
+            metadata["crs"]
+        ):
+            raise ValueError("Numeric raster transform/CRS failed roundtrip")
+        np.testing.assert_allclose(
+            xy(restored.transform, len(y) - 1, 0),
+            np.asarray(metadata["origin_xy_m"]) + [x[0], y[0]],
+            rtol=0,
+            atol=1e-7,
+        )
+
+
 def export_grid_run(input_store, output):
     input_store = Path(input_store).resolve()
     support_file = input_store.parent / "support.json"
@@ -41,7 +114,7 @@ def export_grid_run(input_store, output):
                 "Nonuniform grids require an explicit resampling step before raster export"
             )
         ox, oy = grid.attrs["origin_xy_m"]
-        transform = from_origin(ox + x[0] - spacing / 2, oy + y[-1] + spacing / 2, spacing, spacing)
+        transform = metric_grid_transform(x, y, spacing, [ox, oy], grid.attrs["crs"])
         files = {
             "radar_attribute": (grid.value.values, "attribute_unit"),
             "nearest_baseline": (grid.nearest_value.values, "attribute_unit"),

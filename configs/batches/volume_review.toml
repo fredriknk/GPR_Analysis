@@ -1,0 +1,38 @@
+schema_version = "0.1"
+
+[[jobs]]
+job_id = "volume"
+operation = "volume"
+config = "../volumes/synthetic_demo.toml"
+
+[[jobs]]
+job_id = "layers"
+operation = "interpret"
+depends_on = ["volume"]
+volume = "@volume"
+config = "../interpretation/synthetic_layers.toml"
+
+[[jobs]]
+job_id = "drains"
+operation = "interpret"
+depends_on = ["volume"]
+volume = "@volume"
+config = "../interpretation/synthetic_drains.toml"
+
+[[jobs]]
+job_id = "layers-gis"
+operation = "export-interpretation"
+depends_on = ["layers"]
+input = "@layers"
+
+[[jobs]]
+job_id = "drains-gis"
+operation = "export-interpretation"
+depends_on = ["drains"]
+input = "@drains"
+
+[[jobs]]
+job_id = "report"
+operation = "report"
+depends_on = ["volume", "layers", "drains", "layers-gis", "drains-gis"]
+runs = ["@volume", "@layers", "@drains", "@layers-gis", "@drains-gis"]

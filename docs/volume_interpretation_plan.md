@@ -1,6 +1,9 @@
 # M7 — Radar volumes, interpreted layers and drainage candidates
 
-Status: **planned, not implemented**. Prepared 2026-10-20 for implementation with
+Status: **baseline implemented; field/native-QGIS acceptance pending**. Prepared
+and implemented 2026-10-20; see [volume_release.md](volume_release.md) for commands,
+artifacts and limits. The specification below retains later acceptance requirements.
+Coding workflow requested with
 **6.1 Sol, xhigh reasoning**. This is a coding handoff, not a runtime model choice.
 The requested outcome is to inspect grid partitions 1 and 2 as volumes, interpret
 layers and possible drainage, and export numerical layers to QGIS.
@@ -228,8 +231,9 @@ cores/profiles. Attractive rendering is not field validation.
 
 ## 5. Proposed versioned contracts
 
-These are specifications to implement in `docs/data_contracts.md`, not supported
-formats yet. Keep existing profile/grid/CSV readers working.
+The baseline schema 1.0 is implemented in `docs/data_contracts.md`. The table also
+records optional later products; absent elevation/total uncertainty products stay
+absent. Existing profile/grid/CSV readers retain their prior formats.
 
 | Artifact | Minimum contents |
 |---|---|
@@ -374,9 +378,9 @@ spike justifies it, behind an optional extra with verified Windows/Linux locks.
 
 ### Proposed commands
 
-These new commands/configs **do not exist yet**. Implement and verify them before
-presenting them as runnable README examples. Config-relative paths and fresh output
-directories follow existing conventions.
+These commands/configs are implemented in package 0.4.0. Config-relative paths and
+fresh output directories follow existing conventions. Examples assume fresh output
+paths; update viewer references when choosing new run names.
 
 ```powershell
 python -m soil_sensing volume --config configs/volumes/synthetic_demo.toml --output outputs/volume-demo-001

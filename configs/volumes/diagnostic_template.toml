@@ -1,0 +1,26 @@
+# Unfilled template: exact source/profile pairs and quantitative stores required.
+# Coordinates approximate raw NMEA layout; null CRS/production plot; GIS/depth gated.
+schema_version = "1.0"
+synthetic = false
+coordinate_mode = "raw_gps_relative"
+vertical_axis = "recording_time"
+position_policy = "accepted"
+direction_policy = "separate"
+profiles = []
+partitions = []
+track_gap_m = 1.0
+track_buffer_m = 0.5
+evaluation_sample_step = 16
+
+[grid]
+spacing_m = 0.25
+bin_m = 0.25
+max_distance_m = 1.0
+max_edge_m = 1.5
+max_cells = 2000000
+
+[volume]
+minimum_lines = 2
+block_samples = 8
+max_memory_mb = 512.0
+max_stencil_patterns = 32

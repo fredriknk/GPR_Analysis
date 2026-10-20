@@ -1,0 +1,22 @@
+# JSON picks must include namespaced identities, native sample/time, review/evidence.
+schema_version = "1.0"
+kind = "layers"
+partition_id = "grid-01"
+picks_file = "../../data/metadata/horizon_seeds.json"
+track = true
+preview_proposed = true
+
+[tracking]
+search_ns = 5.0
+max_slope_ns_per_m = 3.0
+slope_penalty = 0.05
+curvature_penalty = 0.1
+minimum_strength = 40.0
+max_track_gap_m = 6.0
+polarity = "positive"
+
+[[layers]]
+layer_id = "upper_interval"
+top = "H1"
+bottom = "H2"
+minimum_interval_ns = 2.0

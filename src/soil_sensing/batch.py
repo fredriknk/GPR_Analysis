@@ -12,6 +12,10 @@ from soil_sensing.ingest import write_json
 from soil_sensing.runs import begin_run, finish_run, input_hash
 
 OPERATIONS = {
+    "volume": {"config"},
+    "interpret": {"config", "volume"},
+    "visualize-volume": {"config"},
+    "export-interpretation": {"input"},
     "visualize": {"config"},
     "train": {"texture", "features", "config"},
     "predict": {"model", "input"},
@@ -83,6 +87,22 @@ def _resolve(value, base, completed, dependencies):
 
 
 def _execute(operation, values, output):
+    if operation == "volume":
+        from soil_sensing.volumes.workflow import volume_run
+
+        return volume_run(values["config"], output)
+    if operation == "interpret":
+        from soil_sensing.interpretation.workflow import interpret_run
+
+        return interpret_run(values["config"], values["volume"], output)
+    if operation == "visualize-volume":
+        from soil_sensing.interpretation.workflow import volume_visualize_run
+
+        return volume_visualize_run(values["config"], output)
+    if operation == "export-interpretation":
+        from soil_sensing.export.interpretation import export_interpretation_run
+
+        return export_interpretation_run(values["input"], output)
     if operation == "visualize":
         from soil_sensing.export.scene import visualize_run
 
@@ -129,6 +149,28 @@ def _inputs(operation, values):
             inputs.append(config["plots_file"])
     if operation == "export-grid":
         inputs.append(values["input"].parent / "support.json")
+    if operation == "volume":
+        from soil_sensing.volumes.workflow import load_volume_config
+
+        config, _, _, _ = load_volume_config(values["config"])
+        inputs.extend(config["profiles"])
+        if config.get("plots_file"):
+            inputs.append(config["plots_file"])
+    if operation in ("interpret", "visualize-volume"):
+        import tomllib
+
+        config = tomllib.loads(values["config"].read_text(encoding="utf-8"))
+        names = (
+            ("picks_file", "parent_interpretation", "review_decisions", "apices_file")
+            if operation == "interpret"
+            else ("volume_run",)
+        )
+        inputs.extend(
+            (values["config"].parent / config[k]).resolve() for k in names if config.get(k)
+        )
+        inputs.extend(
+            (values["config"].parent / p).resolve() for p in config.get("interpretation_runs", [])
+        )
     return inputs
 
 

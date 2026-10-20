@@ -20,6 +20,25 @@ results with matching source/configuration/code/environment fingerprints.
 optional `visualization/preview.py` is a read-only, synthetic-only loopback viewer;
 it is not a scientific processing service or a requirement for exported HTML.
 
+M7 adds `volumes/` for frozen selections, capability gates, horizontal stencils and
+bounded vertical-block writes. Schema 1.0 is independent of M4.5 geographic grids.
+Raw-GPS volumes retain null CRS and production plot ID; geographic validators stay
+strict. `processing/attributes.py` computes signed/envelope/RMS products before
+horizontal binning. Each variable has its own masks and contributor weights; full
+quantitative profiles remain available beside the cube.
+
+`interpretation/` owns namespaced pick revisions, seeded second-order tracking,
+accepted-pick surfaces, finite-offset thickness and native diffraction evidence
+graphs. Review state is separate from a detection threshold. Partial uncertainty
+requires explicit assumptions/evidence and shares calibration errors between
+boundaries. `visualization/volume.py` packages precomputed masked slices, supported
+layer shells, symbolic paths, full B-scans and downloads. Scientific reconstruction
+stays in Python. Preview decimation never changes exported arrays.
+`export/interpretation.py` reuses metric affine/numeric raster helpers in
+`export/gis.py`, adds QML/PLY sidecars, and checks reopened pixels/geometries.
+M7 batch operations use existing content fingerprints. See
+[volume_release.md](volume_release.md) for commands and acceptance limits.
+
 ## Goal and scope
 
 Build a local, reproducible scientific pipeline for four 100 × 100 m plots.

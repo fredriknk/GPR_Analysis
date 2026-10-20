@@ -1,0 +1,8 @@
+schema_version = "1.0"
+volume_run = "../../outputs/volume-demo-001"
+interpretation_runs = ["../../outputs/layers-demo-001", "../../outputs/drains-demo-001"]
+
+[preview]
+max_voxels = 60000
+max_payload_mb = 30.0
+max_native_samples = 1000000

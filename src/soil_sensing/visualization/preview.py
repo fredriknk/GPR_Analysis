@@ -24,13 +24,25 @@ ALLOWED = (
 def preview_files(root):
     root = Path(root).resolve()
     manifest = verify_run(root)
-    if any(name not in manifest.get("artifacts", {}) for name in ALLOWED if name != "run.json"):
+    volume = manifest.get("operation") in ("volume", "visualize_volume")
+    allowed = (
+        (
+            "index.html",
+            "assets/plotly.min.js",
+            "assets/volume.js",
+            "assets/plotly.LICENSE.txt",
+            "run.json",
+        )
+        if volume
+        else ALLOWED
+    )
+    if any(name not in manifest.get("artifacts", {}) for name in allowed if name != "run.json"):
         raise ValueError("Preview assets must all be declared in the verified run")
-    scene = json.loads((root / "scene.json").read_text(encoding="utf-8"))
+    scene = manifest if volume else json.loads((root / "scene.json").read_text(encoding="utf-8"))
     if scene.get("synthetic") is not True:
         raise ValueError("Loopback preview is restricted to explicitly synthetic scenes")
     result = {}
-    for name in ALLOWED:
+    for name in allowed:
         path = root / name
         if path.is_symlink() or not path.resolve().is_relative_to(root):
             raise ValueError("Preview assets must remain inside their verified synthetic run")

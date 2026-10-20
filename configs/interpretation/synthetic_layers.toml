@@ -1,0 +1,12 @@
+schema_version = "1.0"
+kind = "layers"
+synthetic = true
+partition_id = "grid-01"
+track = false
+preview_proposed = false
+
+[[layers]]
+layer_id = "upper_interval"
+top = "H1"
+bottom = "H2"
+minimum_interval_ns = 2.0

@@ -1,0 +1,33 @@
+schema_version = "1.0"
+synthetic = true
+coordinate_mode = "projected"
+vertical_axis = "recording_time"
+position_policy = "accepted"
+direction_policy = "separate"
+track_gap_m = 6.0
+track_buffer_m = 7.0
+evaluation_sample_step = 16
+
+[grid]
+spacing_m = 2.0
+bin_m = 2.0
+max_distance_m = 18.0
+max_edge_m = 16.0
+max_cells = 1000000
+
+[volume]
+minimum_lines = 2
+block_samples = 16
+max_memory_mb = 512.0
+max_stencil_patterns = 32
+
+[attributes]
+edge_samples = 4
+minimum_segment_samples = 16
+padding_samples = 16
+rms_samples = 5
+
+[preview]
+max_voxels = 60000
+max_payload_mb = 30.0
+max_native_samples = 1000000

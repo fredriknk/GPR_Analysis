@@ -1,5 +1,8 @@
 # Data contracts
 
+M7 adds independent volume/interpretation schema 1.0 below. It does not change
+RadarProfile 0.2, geographic attribute-grid 0.1 or the original pick CSV.
+
 The raw RadarProfile schema `0.2`, survey configuration and assignment CSV are
 validated by code. M2/M3 extend the same profile with optional located and derived
 fields; M4 validates manual texture observations and audited joins. M4.5 validates
@@ -318,3 +321,150 @@ input content, referenced scene geometry/profiles, configuration, code and exact
 environment. Each cache execution gets a new directory; only complete, matching,
 hash-verified runs are reused. A corrupt completed entry fails instead of silently
 being trusted. Batch manifests record jobs, paths, cache keys and reuse status.
+
+
+## Radar volumes and reconstruction selections (M7, schema 1.0)
+
+A volume run contains one independent directory per exact partition, plus
+`products.json`, `run.json`, offline HTML/assets and scientific ZIP downloads.
+`selection.json` freezes sorted `[source_id, profile_id]` pairs, input content
+hashes, position/direction policies, computational domain, grid/attribute options,
+vertical basis and code fingerprint. Its SHA-256 includes all these fields.
+Repeated lines and cross-partition membership fail. Labels/counts never select
+inputs. `position_policy=accepted` admits measured and accepted GPS-interpolated
+positions; `measured` admits measured positions only. Mixed directions require
+`combine_reviewed` and explicit combination evidence, otherwise split partitions.
+Incompatible axes, processing signatures, units, sessions or dates fail. There
+is no implicit normalization, vertical resampling or CRS assignment.
+
+`coordinate_mode` is `projected`, `raw_gps_relative` or explicit `synthetic_local`.
+Projected volumes require reviewed assignments, survey/plot, metric CRS and
+geometry. Raw-GPS volumes retain null CRS/production plot ID, an approximate
+latitude/longitude anchor, null positional precision and a diagnostic warning.
+Their domain is a computational footprint, not a surveyed boundary. Synthetic
+local coordinates require `synthetic=true`. Relative ground is labelled flat;
+no ground elevation or vertical datum is invented. Capability JSON gates only
+dependent actions; failed preflight still leaves capabilities and a failed manifest.
+
+Scientific arrays are separate from display arrays:
+
+| Artifact / field | Dimensions | Meaning |
+|---|---|---|
+| `volume.zarr/{signed_amplitude,envelope,rms}` | `(vertical,y,x)` float64 | Separate quantitative interpolated attributes in original amplitude units |
+| `<attribute>_valid` | `(vertical,y,x)` bool | Exactly the finite candidate and nearest-baseline mask |
+| `<attribute>_reason` | `(vertical,y,x)` uint16 | Zero only on supported values; reason codes below |
+| `<attribute>_nearest` | `(vertical,y,x)` | Nearest baseline with identical geometric support |
+| `vertical`, `vertical_lower`, `vertical_upper` | `(vertical,)` | Native centres and midpoint bounds; ns or positive-down metres |
+| `native_sample` | `(vertical,)` | Original zero-based sample index; no resampling |
+| `x`, `y` | `(x,)`, `(y,)` | Increasing local metre cell centres |
+| `support.zarr/<attribute>_bin` | `(vertical,y,x,vertex)` int | Up to three references into `contributors.json`; -1 absent |
+| `<attribute>_weight` | `(vertical,y,x,vertex)` | Horizontal bin weights, sum one where supported; zero outside |
+| `<attribute>_line_count`, `_direction_count` | `(vertical,y,x)` | Distinct line/direction counts in the supporting acquisition triangle |
+| `<attribute>_distance_m` | `(vertical,y,x)` | Nearest support distance, also diagnostic outside the hull |
+| `<attribute>_interpolated_position_fraction` | `(vertical,y,x)` | Fraction of stencil traces with GPS-interpolated positions; NaN outside support |
+
+Reason bits: 1 outside domain, 2 input quality, 4 geometric support, 8 insufficient
+independent lines, 16 calibration and 32 interpretation. Volume, calibration and
+interpretation masks belong to their respective products. No count/distance is
+a standard uncertainty. All voxels are estimates, including those over a line.
+
+Contributor bins retain namespaced source/profile/trace IDs, position status,
+quality flags, acquisition UTC and equal native-member weights. The voxel's
+`native_sample` resolves its vertical contributor, so bins/stencils may be reused
+only with the same geometry and validity pattern. Native quantitative stores and
+`native.json` are included for full B-scan review. Source checksums, histories,
+calibration, processing signature, origin/CRS, domain and all options remain in
+metadata. Scientific blocks are appended to chunked format-2 Zarr and each is
+reopened and compared exactly. Budgets cover input/attribute working sets, blocks,
+stencil caches and serialization separately from preview payload limits.
+
+Envelope is the magnitude of SciPy Hilbert on contiguous native segments with
+recorded reflection padding, minimum length and excluded edges. ADC-contaminated
+traces are wholly excluded from envelope/RMS. Signed samples have their own mask;
+filters that spread clipping exclude the whole signed trace too. RMS uses an
+explicit odd native-sample window. Display gain/background removal never feeds
+these products. Horizontal support reuses whole-triangle domain/holes, hull,
+edge/distance rules and adds minimum distinct-line support. Track segments break
+at missing/rejected positions and configured gaps. Holdouts rebuild bins, stencils
+and acquisition footprints from training lines, optionally with a spatial buffer.
+`evaluation.json` records supported counts/coverage and candidate/nearest errors
+in attribute units, with null errors for unsupported folds. These are software/
+interpolation checks, not field interpretation accuracy.
+
+## Reviewed interpretation (M7, schema 1.0)
+
+`interpretation.json` contains revision, nullable parent hash, selection hash,
+interpretation hash and namespaced picks. Each pick has a unique ID, neutral
+horizon ID, source/profile/trace, native sample, recording/corrected time basis,
+time in ns, nullable standard uncertainty in ns, proposed/accepted/rejected state,
+reviewer and evidence. Time must agree with its native sample within half an
+interval. Unknown precision is null. The old CSV remains unchanged. Assisted
+tracks preserve seed decisions and emit proposed picks; segments without seeds
+stay missing. Native signal/position gaps split paths. Search/slope bounds,
+slope/curvature penalties, waveform agreement and polarity are explicit options.
+
+Browser `review_decisions` JSON references the reconstruction selection and parent
+interpretation hash. Python validates edits and creates a new immutable revision.
+It does not overwrite prior review or silently accept assisted picks. Default
+surfaces use accepted picks only; proposed surfaces require `preview_proposed`
+and cannot be exported as accepted geographic products. Contradictory exact-location
+boundary picks are excluded; cross-line scientific agreement still needs review.
+
+`surfaces.zarr` has `(horizon,y,x)` boundary times, reason masks, optional calibrated
+depths, and `(horizon,y,x,vertex)` support IDs/weights resolving to
+`surface_contributors.json`. `(layer,y,x)` contains named boundary time separation
+or vertical thickness and reason masks. Layer metadata identifies top/bottom
+boundaries. Crossed, unsupported and unresolved zero-width intervals remain NaN;
+zero pinch-out requires explicit evidence. No topsoil label is inferred.
+Finite-offset homogeneous horizontal-reflector depth requires evidenced physical
+zero, velocity, antenna geometry and calibration. Thickness is the difference
+of boundary depths, not `v * delta_time / 2` or thickness normal to a dipping bed.
+
+Total spatial/model uncertainty remains unknown. An optional `uncertainty` table
+requires `pick_error_model="independent_across_traces"`, an evidenced
+`between_boundary_correlation` and nonempty evidence. It permits separately named
+pick-component/partial standard uncertainties. Shared velocity/time-zero errors
+use derivative differences between boundaries; they are not added independently.
+Unknown pick errors remain unknown. Partial arrays never become total confidence
+intervals. Calibrated mesh reports include volume only over complete supported
+cells, plus included/excluded lattice area. Time meshes are local display assets.
+PLY sidecars retain units/transforms, parent cells, selection/review hashes and
+which shell edge faces are display caps, not observed walls.
+
+`pipe_candidates.json` contains native apex detections, trace/sample references,
+score components, robust time-shape fit residuals, a bounded alternative association
+graph and candidate review states. Analyst-seeded template testing is not an
+exhaustive drain search. Curvature in recording time is descriptive; no fitted
+soil velocity, pipe depth, diameter, material or function is asserted. A linked
+candidate needs configured independent line crossings; sparse components remain
+point anomalies. Associations cannot cross domain holes or direction groups.
+Candidate score is evidence, not probability. Symbolic path width is labelled.
+Candidate review changes have revision/parent/selection/detector hashes and cannot
+alter the underlying detection evidence.
+
+## Interpretation exports and views (M7)
+
+`export --kind interpretation` dispatches validated completed interpretation runs.
+Local frames cannot enter GIS export. Geographic outputs use shared north-up metric
+affines, increasing-y reversal, numerical float64 pixels, NaN nodata, explicit units,
+basis/gates, lineage tags and reopen comparisons. QML sidecars apply pseudocolour
+without replacing queryable numerical pixels. Native QGIS style loading is an
+outstanding verification step. Optional partial uncertainty is exported only when
+finite and explicitly named. No uncalibrated metre thickness/elevation is emitted.
+
+Drain score/time maps require explicit footprint radius and ordered ns gates.
+The maximum evidence score is projected only onto tested apex footprints clipped
+to the domain; unsearched support remains NaN. Rejected evaluated events can have
+zero score; they do not establish drain absence. All crossings/alternative paths
+and their vertical values remain in companion GeoPackage/JSON, preserving objects
+that overlap at different times. GeoPackage geometries and raster orientation/
+centres/values are reopened and checked.
+
+Volume HTML embeds precomputed preview arrays and full B-scans and bundles local
+Plotly assets. Only complete valid four-corner slice/shell cells receive faces;
+unknown holes stay absent. Scientific ZIP downloads retain full arrays, support,
+native sources and matching interpretation meshes. Preview stride, display opacity,
+thresholds and cameras never change scientific exports. Custom contributor or
+position selections hide derived layers and download a `reconstruction_request`;
+reconstruction is a new Python run. View JSON is bound to its viewer hash and
+validates scenes, axes, layers, camera and controls before restoration.

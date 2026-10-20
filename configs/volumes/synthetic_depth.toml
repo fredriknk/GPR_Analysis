@@ -1,0 +1,21 @@
+# Explicit simulated calibration; never a field-data fallback.
+schema_version = "1.0"
+synthetic = true
+synthetic_depth = true
+coordinate_mode = "projected"
+vertical_axis = "depth"
+position_policy = "accepted"
+direction_policy = "separate"
+
+[grid]
+spacing_m = 2.0
+bin_m = 2.0
+max_distance_m = 18.0
+max_edge_m = 16.0
+max_cells = 1000000
+
+[volume]
+minimum_lines = 2
+block_samples = 16
+max_memory_mb = 512.0
+max_stencil_patterns = 32

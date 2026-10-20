@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "soil-sensing"
-version = "0.3.0"
+version = "0.4.0"
 description = "Reproducible GPR and complementary soil-sensor analysis"
 readme = "README.md"
 requires-python = ">=3.11"

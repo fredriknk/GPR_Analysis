@@ -332,14 +332,14 @@ radargrams, GPS strips, window-quality summaries and a local HTML report.
 See [real_data_results.md](real_data_results.md) for measured results, reproduction
 commands and scientific limits. This run does not establish field texture accuracy.
 
-## M7 — Radar volumes, layers and drainage candidates (planned)
+## M7 — Radar volumes, layers and drainage candidates (baseline implemented)
 
-Requested 2026-10-20; implementation has not started. The detailed
+Implemented 2026-10-20 in package 0.4.0. The detailed
 [volume and interpretation plan](volume_interpretation_plan.md) defines six
 checkpoints: contracts/feasibility, supported scientific cubes, offline volume
 viewer, reviewed horizons/thickness, drainage candidates, and QGIS/release
 integration. It includes recommended methods, contracts, package boundaries,
-proposed commands, validation and a 6.1 Sol / xhigh implementation prompt.
+commands, validation and a 6.1 Sol / xhigh implementation prompt.
 
 Reuse M3 quantitative profiles, M4.5 support rules/viewer and M6 GIS/run adapters.
 The existing 34-line and 22-line grid partitions are diagnostic display groups,
@@ -348,7 +348,22 @@ their review without inventing a CRS or calibration. Geographic exports require
 reviewed geometry/CRS; metre thickness additionally requires physical time zero
 and applicable velocity evidence. Radar isosurfaces, interpreted layer boundaries
 and potential drainage paths remain separate products with source/support lineage.
-No new M7 commands or scientific products are implemented by this planning update.
+Implemented: M7a frozen selections/capabilities and a separate local contract;
+M7b native envelope/signed/RMS cubes, per-variable stencils/masks, bounded writes
+and whole-line/buffer evaluation; M7c masked cutaways, B-scans, stale-selection
+handling and downloads; M7d immutable pick review, seeded tracking, supported
+surfaces/shells, time intervals and evidenced finite-offset thickness; M7e analyst
+apex templates, robust time-shape fits, bounded graphs and candidate review;
+M7f numeric GeoTIFF/QML, GeoPackage, PLY/Zarr, reports, batches and wheel assets.
+
+A clean wheel environment passes 92 synthetic Python tests; Node passes 12 controller
+tests. Runs exercise both synthetic partitions and an explicitly calibrated depth
+fixture. Commands, versions, measurements and limits are in
+[volume_release.md](volume_release.md). Native QGIS style loading, direct file-browser
+verification and field validation are outstanding release gates. Migration,
+arbitrary resampling, absolute elevation, fitted spatial/model uncertainty and
+independently validated pipe identification remain outside the baseline. New tests
+require no private data.
 
 ## Field metadata to collect
 

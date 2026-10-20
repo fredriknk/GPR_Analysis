@@ -92,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     predict.add_argument("--output", type=Path, required=True, help="New run directory")
     export = commands.add_parser("export", help="Export validated products to GIS")
-    export.add_argument("--kind", choices=("grid", "predictions"), required=True)
+    export.add_argument("--kind", choices=("grid", "predictions", "interpretation"), required=True)
     export.add_argument("--input", type=Path, required=True)
     export.add_argument(
         "--reference", type=Path, help="Required model reference for texture estimates"
@@ -117,8 +117,29 @@ def main(argv: list[str] | None = None) -> int:
     preview.add_argument("--run", type=Path, required=True)
     preview.add_argument("--port", type=int, default=0)
     preview.add_argument("--duration-seconds", type=int, default=600)
+    volume = commands.add_parser("volume", help="Reconstruct supported native-sample radar volumes")
+    volume.add_argument("--config", type=Path, required=True)
+    volume.add_argument("--output", type=Path, required=True)
+    interpret = commands.add_parser(
+        "interpret", help="Review native horizons and drainage candidates"
+    )
+    interpret.add_argument("--config", type=Path, required=True)
+    interpret.add_argument("--volume", type=Path, required=True)
+    interpret.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == "volume":
+            from soil_sensing.volumes.workflow import volume_run
+
+            volume_run(args.config, args.output, progress=lambda s: print(s, flush=True))
+            print(f"Volume explorer: {args.output.resolve() / 'index.html'}")
+            return 0
+        if args.command == "interpret":
+            from soil_sensing.interpretation.workflow import interpret_run
+
+            interpret_run(args.config, args.volume, args.output)
+            print(f"Interpretation: {args.output.resolve()}")
+            return 0
         if args.command == "preview":
             from soil_sensing.visualization.preview import preview_run
 
@@ -145,13 +166,21 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Report: {args.output.resolve() / 'index.html'}")
             return 0
         if args.command == "export":
-            from soil_sensing.export.gis import export_grid_run, export_predictions_run
+            if args.kind == "interpretation":
+                from soil_sensing.export.interpretation import export_interpretation_run
 
-            if args.kind == "grid":
+                if args.reference:
+                    raise ValueError("Interpretation export does not take --reference")
+                export_interpretation_run(args.input, args.output)
+            elif args.kind == "grid":
+                from soil_sensing.export.gis import export_grid_run
+
                 if args.reference:
                     raise ValueError("Grid export does not take --reference")
                 export_grid_run(args.input, args.output)
             else:
+                from soil_sensing.export.gis import export_predictions_run
+
                 if not args.reference:
                     raise ValueError(
                         "Texture export requires --reference with model/lab definition"
@@ -178,6 +207,15 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "visualize":
+            import tomllib
+
+            specification = tomllib.loads(args.config.read_text(encoding="utf-8"))
+            if specification.get("schema_version") == "1.0":
+                from soil_sensing.interpretation.workflow import volume_visualize_run
+
+                volume_visualize_run(args.config, args.output)
+                print(f"Volume viewer: {args.output.resolve() / 'index.html'}")
+                return 0
             from soil_sensing.export.scene import visualize_run
 
             result = visualize_run(
@@ -309,7 +347,8 @@ def main(argv: list[str] | None = None) -> int:
                 if args.command in ("train", "predict")
                 else (
                     "soil-sensing[processing,field,visualization,fusion,geo]"
-                    if args.command in ("visualize", "export", "report", "batch", "demo")
+                    if args.command
+                    in ("visualize", "volume", "interpret", "export", "report", "batch", "demo")
                     else "soil-sensing[processing]"
                 )
             ),

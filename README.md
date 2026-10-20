@@ -21,6 +21,9 @@ only synthetic model checks have been run. M6 adds verified GIS exports, portabl
 HTML reports, dependency-aware batches, a full synthetic demo and Windows/Linux CI.
 No production plot assignments, field
 velocity calibration, real lab texture samples or field texture predictions are present.
+M7 adds native-sample radar cubes, offline cutaways, reviewed horizon/layer products,
+analyst-seeded drainage candidates and numerical interpretation exports. See
+[the M7 release notes](docs/volume_release.md); field interpretation remains unvalidated.
 GRS provisionally means gamma-ray spectrometry; confirm before implementing that adapter.
 All complementary sensor modules are optional and must accept new sensor types later.
 
@@ -30,7 +33,7 @@ All complementary sensor modules are optional and must accept new sensor types l
 - [Data contracts](docs/data_contracts.md): arrays, units, coordinates, sensor support.
 - [Implementation plan](docs/implementation_plan.md): ordered tasks and acceptance criteria.
 - [3D Plot Explorer](docs/visualization_plan.md): implemented M4.5 tools, commands, benchmark and release gates.
-- [Volumes, layers and drainage plan](docs/volume_interpretation_plan.md): planned M7 reconstruction, interpretation, QGIS exports and 6.1 Sol / xhigh handoff.
+- [Volumes, layers and drainage](docs/volume_interpretation_plan.md): implemented M7 baseline and remaining acceptance gates.
 - [Library assessment](docs/library_assessment.md): reuse decisions and primary sources.
 - [Test-data assessment](docs/test_data_assessment.md): observations and unresolved issues.
 - [Opt-in real-data checks](docs/local_data_checks.md): local binary/GPS/processing/storage regression suite.
@@ -312,6 +315,34 @@ report folder for sharing; a cached batch manifest itself references its local c
 See [release verification](docs/release_verification.md) for commands, measurements
 and field limitations.
 
+## Radar volumes and interpretation
+
+Install the existing extras (no additional scientific library is needed):
+
+```powershell
+python -m pip install -r requirements-volumes-win-py313.lock
+python -m pip install --no-deps -e .
+python -m soil_sensing volume --config configs/volumes/synthetic_demo.toml --output outputs/volume-demo-001
+python -m soil_sensing interpret --config configs/interpretation/synthetic_layers.toml --volume outputs/volume-demo-001 --output outputs/layers-demo-001
+python -m soil_sensing interpret --config configs/interpretation/synthetic_drains.toml --volume outputs/volume-demo-001 --output outputs/drains-demo-001
+python -m soil_sensing visualize --config configs/visualization/volume_demo.toml --output outputs/volume-viewer-001
+python -m soil_sensing export --kind interpretation --input outputs/layers-demo-001 --output outputs/layers-gis-001
+python -m soil_sensing export --kind interpretation --input outputs/drains-demo-001 --output outputs/drains-gis-001
+```
+
+Use fresh paths for each run, updating viewer TOML references when changing names.
+`configs/batches/volume_review.toml` composes reconstruction, both interpretations,
+GIS bundles and a portable report. The explicit `synthetic_depth.toml` fixture
+tests calibrated depth/thickness with simulated evidence. Ordinary time products
+export intervals in ns; they do not emit metre thickness.
+
+The explorer embeds its preview and full native B-scans, bundles Plotly locally,
+and downloads scientific arrays/support/meshes separately. Changing contributors
+or position policy hides derived objects and offers a reconstruction request.
+Review decisions are JSON inputs to a new `interpret` run. Field/diagnostic templates
+are deliberately unfilled. Raw-GPS volumes retain null CRS/production plot ID and
+cannot enter geographic export.
+
 ## Layout
 
 ```text
@@ -326,7 +357,9 @@ src/soil_sensing/
   features/                   RMS attributes and reviewed reflector picks
   fusion/                     Manual texture adapter and audited matching
   inference/                  Planned calibrated estimates and validation
-  export/                     Raw/quantitative/display radargrams; GIS planned
+  volumes/                    Native-sample reconstruction, contracts and audits
+  interpretation/             Reviewed horizons, layers and diffraction candidates
+  export/                     Radargrams, scientific GIS, meshes and reports
   visualization/              Validated scenes, explicit synthetic demo, offline viewer
 configs/{surveys,plots,pipelines}/  Survey, plot and processing configurations
 data/metadata/                Explicit survey assignments

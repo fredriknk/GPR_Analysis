@@ -38,7 +38,9 @@ jobs:
       - run: python -m ruff check .
       - run: python -m ruff format --check .
       - run: node --test tests/viewer.test.cjs
+      - run: node --test tests/volume_viewer.test.cjs
       - run: python -m soil_sensing demo --output outputs/synthetic-ci
+      - run: python -m soil_sensing batch --config configs/batches/volume_review.toml --output outputs/volume-ci
       - uses: actions/upload-artifact@v7
         with:
           name: synthetic-review-${{ matrix.os }}
