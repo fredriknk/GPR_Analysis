@@ -178,9 +178,20 @@ existing evidenced physical time zero and velocity calibration, with metre gates
 `recording_time` and `corrected_time` use ns and never imply physical depth.
 
 For unassigned lines, set `diagnostic=true`, omit `plots_file`, and provide up to
-four quantitative stores. Each line is shown separately using odometer distance
+100 quantitative stores. Each line is shown separately using odometer distance
 and a schematic cross-line axis; it receives no geographic grid or plot assignment.
 The current private test collection remains diagnostic.
+
+To process every local DT1/HD/GPS set and build one selector containing all
+diagnostic 3D curtains:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/build_real_3d_viewer.py --root GPR_raw_data --output outputs/real-data-3d-all-new
+```
+
+The runner saves and exactly reopens every full-resolution quantitative store,
+then decimates only browser curtain geometry. Its output is local and ignored by
+Git. See [real_data_results.md](docs/real_data_results.md) for the verified run.
 
 The exporter writes `scene.json`, `evaluation.json`, `run.json`, and per-scene
 `scene-01/grid.zarr` / `support.json` (no grids for diagnostic lines). Nearest and

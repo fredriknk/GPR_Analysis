@@ -244,8 +244,12 @@ def visualize_run(config_path: Path, output: Path, *, progress=None):
             if config.get("diagnostic"):
                 key = (i, None)
             groups.setdefault(key, []).append(profile)
-        if not 1 <= len(groups) <= 4:
-            raise ValueError("Select between one and four independent plot/session scenes")
+        scene_limit = 100 if config.get("diagnostic") else 4
+        if not 1 <= len(groups) <= scene_limit:
+            raise ValueError(
+                f"Select between one and {scene_limit} independent "
+                + ("diagnostic lines" if config.get("diagnostic") else "plot/session scenes")
+            )
         for key in ("exclusions", "regions"):
             if {s["plot_id"] for s in config.get(key, [])} - {p[0] for p in groups}:
                 raise ValueError(f"{key} reference unselected or unknown plots")

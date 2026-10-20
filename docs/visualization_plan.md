@@ -235,6 +235,12 @@ image-export button exports PNGs. The actual browser review is recorded below.
 The first plot's synthetic packet is centred near (65,50) m / 38 ns; the default
 gate contains it. Subsequent plots shift that event by 4 ns per plot.
 
+Diagnostic collection review supports up to 100 unassigned lines in one selector.
+Only the selected line is rendered in WebGL. Each line keeps its own odometer/time
+frame; the viewer does not invent relative field placement, plot assignment or
+geographic coordinates. Reviewed plot/session scenes and their comparison overview
+remain capped at four independent frames.
+
 Field scenes require existing quantitative stores and reviewed assignments and
 geometry. RMS is re-extracted through the M3 function rather than trusting an
 unverified external feature table. Depth gates select existing calibrated samples,
@@ -324,3 +330,19 @@ distance units, cameras, playback, saved view/restore and PNG export. Screenshot
 and DOM-reported timings are retained under `outputs/browser-review-2026-10-20/`.
 The sidebar scrolls independently so lower controls keep the plot visible. Cloud
 sharing is removed from the modebar. Private field data was not served.
+
+## Full real-data diagnostic run (2026-10-20)
+
+Diagnostic scene selection now scales separately from the four-frame reviewed
+plot overview. `scripts/build_real_3d_viewer.py` processed all 80 DT1 profiles,
+66,774 traces and 16,693,500 samples into exact-round-trip quantitative stores,
+then built one offline selector with 80 independent odometer/time curtains. The
+viewer contains 212,814 decimated curtain vertices and a 30,195,154-byte payload;
+scene construction took 49.1 seconds. Seven controller tests pass with the same
+viewer code.
+
+The completed output is
+`outputs/real-data-3d-all-2026-10-20/viewer/index.html`. It is diagnostic only:
+no overview, geographic placement, depth calibration or soil-property inference
+is enabled. Full run evidence and commands are in
+[real_data_results.md](real_data_results.md).

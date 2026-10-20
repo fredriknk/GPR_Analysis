@@ -326,23 +326,31 @@ class ExplorerRunTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "new path"):
                 visualize_run(config, output)
 
-    def test_processed_store_diagnostic_preserves_input_and_escapes_html_ids(self):
+    def test_processed_collection_diagnostic_preserves_inputs_and_escapes_html_ids(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            profile = synthetic_plots()[0][0]
-            profile.attrs.update(
-                plot_id=None, assignment=None, profile_id="</script><script>alert(1)"
-            )
-            store = root / "quantitative.zarr"
-            save_profile(profile, store)
-            before = tree_hash(store)
+            stores, before = [], {}
+            for index in range(5):
+                profile = synthetic_plots()[0][0].copy(deep=True)
+                profile.attrs.update(
+                    plot_id=None,
+                    survey_id=None,
+                    assignment=None,
+                    profile_id=("</script><script>alert(1)" if index == 0 else f"line-{index}"),
+                )
+                store = root / f"quantitative-{index}.zarr"
+                save_profile(profile, store)
+                stores.append(store)
+                before[store] = tree_hash(store)
             config = root / "scene.toml"
+            profile_list = ",".join(f'"{store.name}"' for store in stores)
             config.write_text(
-                'schema_version="0.1"\ndiagnostic=true\nprofiles=["quantitative.zarr"]\n'
+                f'schema_version="0.1"\ndiagnostic=true\nprofiles=[{profile_list}]\n'
                 "gates=[[30,40]]\n"
             )
             result = visualize_run(config, root / "diagnostic")
-            self.assertEqual(before, tree_hash(store))
+            self.assertEqual(before, {store: tree_hash(store) for store in stores})
+            self.assertEqual(result["scene_count"], 5)
             self.assertEqual(result["grid_cells"], 0)
             html = (root / "diagnostic/index.html").read_text()
             self.assertNotIn("</script><script>alert(1)", html)

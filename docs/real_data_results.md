@@ -83,3 +83,42 @@ laboratory texture references remain unresolved. These outputs support review
 of recorded signals and acquisition quality; they do not identify soil texture,
 calibrated depths or production plot coverage. Missing GPS does not exclude a
 per-trace signal attribute, but prevents its geographic use.
+
+## All-recording 3D viewer
+
+The M4.5 viewer was run on every valid source profile on 2026-10-20. The verified
+local explorer is:
+
+`outputs/real-data-3d-all-2026-10-20/viewer/index.html`
+
+It contains 80 selectable diagnostic scenes, 66,774 traces and 16,693,500
+full-resolution processed amplitude samples. Each quantitative Zarr store was
+reopened and compared exactly before scene construction. Source and derived
+artifact hashes were verified again at completion.
+
+The browser curtains use every 20th trace and every fourth time sample, retaining
+212,814 signed-amplitude vertices across the collection. This display decimation
+does not alter the full stores or the 66,774 quantitative RMS observations for the
+50–90 ns recording-time gate. The self-contained viewer payload is 30,195,154
+bytes and took 49.1 seconds to build after processing on the recorded workstation.
+
+The collection GPS audit represented in these stores contains 65,971 measured,
+nine interpolated, 758 missing and 36 rejected trace positions. GPS status is
+retained in each scene, although diagnostic curtains use independent odometer
+frames because datum/control and relative placement are not verified.
+
+Use the line selector to move among all 80 curtains, drag to rotate, scroll to
+zoom, and use the top/oblique/side camera buttons. Recording time runs downward;
+the signed quantitative amplitude sets curtain color. The 3D shape is a display
+of radar traces along an acquisition line, not a subsurface volume or calibrated
+depth model. The overview remains disabled for diagnostic lines because combining
+their frames would imply an unsupported spatial relationship.
+
+Reproduce in a new output directory:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/build_real_3d_viewer.py --root GPR_raw_data --output outputs/real-data-3d-all-new
+```
+
+The resulting root `run.json`, `collection_summary.json`, per-line Zarr stores,
+`viewer/run.json` and viewer artifacts form one verified immutable-input run.
