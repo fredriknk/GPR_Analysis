@@ -1,0 +1,85 @@
+# Real-data diagnostic results — 2026-10-20
+
+The pipeline was run on five original DT1 recordings, comprising 23,415 traces
+and 5,853,750 amplitude samples. The local, verified report is:
+
+`outputs/real-data-results-2026-10-20-final/index.html`
+
+It includes original radargrams, separate 20 ns display-only AGC views, GPS status
+strips, quantitative window RMS curves, CSV attributes and complete quantitative
+Zarr stores. The summary figures are `radargram-overview.png` and
+`quality-overview.png` in that directory. Private data and derived products remain
+local and ignored by Git.
+
+## Measured results
+
+All profiles have 250 samples at 0.4 ns intervals, spanning 0–99.6 ns recording
+time. The conservative baseline removes each trace's DC mean, excluding ADC-limit
+samples from that mean. No filter, time-zero correction, depth conversion, plot
+assignment or geographic projection is applied.
+
+| Recording | Traces | Missing GPS | Rejected GPS | Valid RMS, 50–90 ns | Median RMS, ADC counts |
+|---|---:|---:|---:|---:|---:|
+| DATA08line/Lines08/LINE00 | 700 | 0 | 0 | 601 / 700 | 3,623.3 |
+| DATA08line/XLINE00 | 223 | 0 | 0 | 223 / 223 | 2,215.8 |
+| Data09line/YLINE00 | 223 | 0 | 0 | 223 / 223 | 2,885.3 |
+| Data09line/Lines/LINE02 | 20,002 | 540 | 0 | 20,002 / 20,002 | 1,852.1 |
+| Data09line/Lines/LINE04 | 2,267 | 0 | 34 | 2,267 / 2,267 | 2,951.7 |
+
+Every tested trace reaches an ADC limit somewhere within 20–50 ns, so every RMS
+measurement in that window is excluded. In 50–90 ns, 23,316 / 23,415 traces
+(99.6%) pass the existing signal checks. In 0–20 ns, 700 June LINE00 traces and
+41 August LINE02 traces pass. These are window-specific quality results, not
+independent field validation or sensor precision estimates.
+
+LINE02 has 19,460 measured and two interpolated positions. Its 540 missing
+positions span 111 separate intervals. The longest is traces 14,189–14,513,
+approximately 141.88–145.12 m on the cumulative odometer axis. The radargram also
+shows a visibly uniform interval in this region, which merits acquisition review.
+LINE04 has 2,232 measured, one interpolated and 34 rejected positions; those 34
+blocks carry unusable fixes. The shorter three profiles have measured positions
+for every trace. No datum or positional accuracy is inferred from acceptance.
+
+The longer June and August radargrams show substantial variation in signal
+structure along the odometer axis. Display gain makes later weak signals easier
+to inspect; it is never used for RMS computation. Brightness after AGC cannot
+compare quantitative strength between profiles. Even the unnormalized ADC-count
+statistics remain acquisition-dependent, not calibrated material properties.
+
+## Verification and reproduction
+
+The six opt-in integration checks passed in 49.406 s; the public synthetic suite
+passed all 65 tests afterward, and Ruff lint/format checks passed.
+See [local_data_checks.md](local_data_checks.md) for commands and scope.
+
+The result run independently wrote and reopened all five quantitative Zarr stores
+with exact dataset equality, checked that display processing left quantitative
+values unchanged, rechecked all 241 original source-file hashes, and verified its
+output hashes using `soil_sensing.export.report.verify_run`. The figures were
+visually reviewed, including the GPS strips and the long-line display sampling.
+
+The result folder contains `run.json` with source/artifact SHA-256 hashes,
+environment and processing configuration, plus the exact presentation runner
+`render_results.py` and `processing.toml`. To regenerate with the installed
+project environment, from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe outputs/real-data-results-2026-10-20-final/render_results.py --root GPR_raw_data --output outputs/real-data-results-new
+```
+
+The output directory must not already exist. Scientific processing uses the
+existing package functions; the saved runner only orchestrates the run and
+presents results. All quantitative calculations retain every trace and sample.
+Radargram displays retain at most 2,001 traces; LINE02 displays every 11th trace
+plus its final trace. CSV rows and Zarr arrays remain complete.
+
+An initial export encountered a Windows file-replacement error in Zarr metadata;
+that run is marked failed. A fresh run completed successfully. A subsequent
+presentation review corrected an empty GPS strip before generating the final
+verified run above. Failed/intermediate outputs are not the delivered report.
+
+Physical time zero, velocity, datum/control, production plot identity and
+laboratory texture references remain unresolved. These outputs support review
+of recorded signals and acquisition quality; they do not identify soil texture,
+calibrated depths or production plot coverage. Missing GPS does not exclude a
+per-trace signal attribute, but prevents its geographic use.

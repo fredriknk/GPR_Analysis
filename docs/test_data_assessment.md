@@ -73,3 +73,21 @@ datasets are saved/reopened with exact equality. The generated raw review is
 `outputs/raw_import_verified_2026-10-19/index.html`. Geographic positions and GPS
 quality remain unevaluated. Time centers use 0.4 ns spacing; physical time-zero is
 explicitly uncorrected. The original file hashes remain the comparison baseline.
+
+## Current GPS and regression status
+
+The M1 paragraphs above describe that historical checkpoint. M2 subsequently
+audited all 80 GPS sidecars, as recorded in `docs/implementation_plan.md` and
+`outputs/gps_audit_release_2026-10-19.json`. The audit retained 758 missing and
+36 rejected positions rather than interpolating through unsupported gaps.
+Field CRS/control and position accuracy remain unverified.
+
+An opt-in local regression suite is implemented at `tests_local/test_real_data.py`.
+See [local_data_checks.md](local_data_checks.md) for the representative selection,
+full-collection option, immutable-source checks and limits. It is separate from
+the synthetic CI suite and never assigns these files to production plots.
+
+All six representative checks passed on 2026-10-20. Actual processed radargrams,
+GPS quality and window attributes from the five recordings are described in
+[real_data_results.md](real_data_results.md). The 540 missing positions in LINE02
+are spread across 111 spans, not one continuous gap; the longest has 325 traces.

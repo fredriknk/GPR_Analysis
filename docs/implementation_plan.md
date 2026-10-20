@@ -303,6 +303,22 @@ accuracy require those inputs. Optional extra sensor/pick/volume/topographic lay
 and PDF reports are deferred; the delivered report is portable HTML. Missing
 evidence was not replaced with synthetic production data.
 
+Follow-up: `tests_local/test_real_data.py` implements six opt-in checks against the
+actual development collection, including independent binary records, documented
+GPS gaps, quantitative RMS/clipping, display separation, exact Zarr round trips
+and all-source checksum protection. See [local_data_checks.md](local_data_checks.md)
+for commands. The ordinary `tests/` suite remains synthetic and private-data-free.
+Remote CI status remains unverified because the read-only status query could not
+pass automatic approval review while account usage was exhausted.
+
+Real-data execution on 2026-10-20: all six local checks passed on five recordings
+and 23,415 traces; all 241 original DT1/HD/GPS hashes were unchanged. The synthetic
+suite still passes all 65 tests and Ruff passes. A separate completed diagnostic
+run saves full quantitative Zarr/CSV products, original and display-gain
+radargrams, GPS strips, window-quality summaries and a local HTML report.
+See [real_data_results.md](real_data_results.md) for measured results, reproduction
+commands and scientific limits. This run does not establish field texture accuracy.
+
 ## Field metadata to collect
 
 Plot boundaries/control/CRS, instrument settings, line spacing/direction, antenna/GNSS

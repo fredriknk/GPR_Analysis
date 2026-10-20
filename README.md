@@ -32,6 +32,8 @@ All complementary sensor modules are optional and must accept new sensor types l
 - [3D Plot Explorer](docs/visualization_plan.md): implemented M4.5 tools, commands, benchmark and release gates.
 - [Library assessment](docs/library_assessment.md): reuse decisions and primary sources.
 - [Test-data assessment](docs/test_data_assessment.md): observations and unresolved issues.
+- [Opt-in real-data checks](docs/local_data_checks.md): local binary/GPS/processing/storage regression suite.
+- [Real-data results](docs/real_data_results.md): five recordings processed, radargrams, signal quality and local report.
 - [Reader decision and verification](docs/dt1_reader_decision.md): GPRPy spike, timing and storage.
 - [Sol / xhigh handoff](docs/sol_xhigh_handoff.md): prompt for the next implementation session.
 

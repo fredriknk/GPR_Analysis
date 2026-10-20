@@ -92,8 +92,19 @@ checks ensure only explicitly synthetic verified assets are available.
 
 `.github/workflows/synthetic.yml` installs Python 3.11 and Node 24, runs tests/Ruff,
 builds the synthetic demo and uploads its report on Windows and Linux. CI results
-are recorded after the milestone is pushed; do not infer a passing remote run
-from local success alone.
+remain unverified after the milestone push. The connector only exposes PR-triggered
+runs; automatic approval review could not authorize the read-only CLI query because
+the account hit its usage limit. This was a review availability failure, not an
+unsafe-action finding. Do not infer a passing remote run from local success alone.
+
+Opt-in checks for real development data are documented in
+[local_data_checks.md](local_data_checks.md). They do not change CI's synthetic-only
+data requirement or establish field texture accuracy.
+
+The representative checks were executed successfully: six tests, five recordings,
+23,415 traces, and unchanged hashes for all 241 original DT1/HD/GPS files.
+The separate [real-data result report](real_data_results.md) records measured
+GPS/clipping counts and preserves quantitative products and reviewed figures.
 
 No real plot assignments, datum/control, time-zero/velocity calibration or lab
 reference samples were invented. Reports distinguish radar attributes, support
