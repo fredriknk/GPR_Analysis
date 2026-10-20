@@ -1,5 +1,13 @@
 # Architecture
 
+The real-data M7 revision adds `volumes/collection.py` to freeze complete parent
+grid memberships from verified collection runs. Crossing directions remain in
+one explicitly combined diagnostic cube, with direction counts and native
+proximity comparisons retained. RMS uses finite local window support, while
+Hilbert retains whole-trace clipping exclusion. The viewer packages lossless
+binary arrays and renders supported cell boundaries, cutaways and plan maps;
+display geometry never modifies scientific arrays. See [volume_makeover.md](volume_makeover.md).
+
 Current implementation: M0–M3 tooling and the manual-texture foundation of M4 are
 complete. M4.5 scene construction, support-masked interpolation and offline export
 are implemented and reviewed in a synthetic WebGL browser session. The comparison

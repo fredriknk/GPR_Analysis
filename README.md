@@ -25,7 +25,8 @@ M7 adds native-sample radar cubes, offline cutaways, reviewed horizon/layer prod
 analyst-seeded drainage candidates and numerical interpretation exports. See
 [the M7 release notes](docs/volume_release.md); field interpretation remains unvalidated.
 Local [grid-1/2 volume checks](docs/real_volume_results.md) now cover 56 full
-profiles, with sparse signed-amplitude support and clipping-excluded envelope/RMS.
+profiles. The revised complete-grid workflow retains both acquisition directions,
+computes RMS from unclipped local windows, and renders supported 3D radar cells.
 GRS provisionally means gamma-ray spectrometry; confirm before implementing that adapter.
 All complementary sensor modules are optional and must accept new sensor types later.
 
@@ -338,12 +339,29 @@ GIS bundles and a portable report. The explicit `synthetic_depth.toml` fixture
 tests calibrated depth/thickness with simulated evidence. Ordinary time products
 export intervals in ns; they do not emit metre thickness.
 
-The explorer embeds its preview and full native B-scans, bundles Plotly locally,
-and downloads scientific arrays/support/meshes separately. Changing contributors
-or position policy hides derived objects and offers a reconstruction request.
+The explorer embeds losslessly packed preview arrays and full native B-scans,
+bundles Plotly locally, and downloads scientific arrays/support/meshes separately.
+It offers a supported-cell 3D volume, orthogonal cutaways, time/depth maps and
+native curtains. Threshold, vertical interval, contrast and opacity act on the
+display; unavailable attributes and interpretations are explicitly disabled.
+Source track filters leave the labelled frozen cube intact. Changing scientific
+contributors requires a new reconstruction run.
 Review decisions are JSON inputs to a new `interpret` run. Field/diagnostic templates
 are deliberately unfilled. Raw-GPS volumes retain null CRS/production plot ID and
 cannot enter geographic export.
+
+For an existing verified real-data collection, preserve each complete grid
+membership, including crossing directions, with the opt-in runner:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/build_real_volumes.py --inputs outputs/real-volume-inputs-2026-10-20 --output outputs/real-grid-review-new --partition grid-01 --partition grid-02 --combination-evidence "Joint diagnostic review of each complete grid; direction responses remain uncalibrated"
+```
+
+This writes a reproducible TOML beside the new output. Local RMS uses five native
+samples and excludes windows touching clipping, missing samples or trace edges.
+Upstream spreading filters still exclude contaminated traces; Hilbert envelope
+still excludes clipped traces. Set `attributes.rms_clipping_policy="trace"` to
+reproduce the earlier RMS policy. See [makeover results](docs/volume_makeover.md).
 
 ## Layout
 

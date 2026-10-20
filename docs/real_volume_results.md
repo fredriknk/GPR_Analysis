@@ -1,5 +1,9 @@
 # M7 real-data grid checks — 2026-10-20
 
+**Historical baseline.** The direction split and whole-trace RMS policy described
+below are superseded by the [complete-grid makeover](volume_makeover.md), which
+reconstructs two parent grids and renders supported local-window RMS volumes.
+
 Grid partitions 1 and 2 were reconstructed from **56 full quantitative profiles,
 8,542 traces and 2,135,500 native amplitude samples**. The exact memberships come
 from the verified all-recording collection summary, rather than counts or labels.

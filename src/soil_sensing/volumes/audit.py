@@ -71,6 +71,21 @@ def geometry_audit(rows, attributes, acquisition_audit, *, max_gap_m, proximity_
                         )
                         if valid.any()
                         else None,
+                        attribute_comparisons={
+                            name: {
+                                "compared_native_samples": int(
+                                    (np.isfinite(values[a[i]]) & np.isfinite(values[b[j]])).sum()
+                                ),
+                                "mean_absolute_difference": float(
+                                    np.mean(np.abs(values[a[i]][mask] - values[b[j]][mask]))
+                                )
+                                if (
+                                    mask := np.isfinite(values[a[i]]) & np.isfinite(values[b[j]])
+                                ).any()
+                                else None,
+                            }
+                            for name, values in attributes.items()
+                        },
                         interpretation=(
                             "nearby traces; unknown positioning error, footprint and orientation"
                         ),

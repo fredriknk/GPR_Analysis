@@ -1,5 +1,9 @@
 # M7 implementation and verification — 2026-10-20
 
+The [real-data makeover](volume_makeover.md) supersedes the direction-split
+delivery, whole-trace RMS default and cutaway-only viewer described in this
+historical baseline. It adds complete-grid volumes and functional display controls.
+
 Package 0.4.0 implements the volume/interpretation baseline from
 [the M7 plan](volume_interpretation_plan.md). The release verification below uses
 synthetic fixtures; subsequent [local real-grid checks](real_volume_results.md)

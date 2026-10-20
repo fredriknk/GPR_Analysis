@@ -6,11 +6,19 @@ coordinate_mode = "raw_gps_relative"
 vertical_axis = "recording_time"
 position_policy = "accepted"
 direction_policy = "separate"
+# For crossing directions in one confirmed grid, use "combine_reviewed" and
+# combination_evidence describing the joint diagnostic review (not calibration).
+# scripts/build_real_volumes.py preserves complete collection grid memberships.
 profiles = []
 partitions = []
 track_gap_m = 1.0
 track_buffer_m = 0.5
 evaluation_sample_step = 16
+evaluation_attribute = "rms"
+
+[attributes]
+rms_samples = 5
+rms_clipping_policy = "window"
 
 [grid]
 spacing_m = 0.25
@@ -23,4 +31,4 @@ max_cells = 2000000
 minimum_lines = 2
 block_samples = 8
 max_memory_mb = 512.0
-max_stencil_patterns = 32
+max_stencil_patterns = 256

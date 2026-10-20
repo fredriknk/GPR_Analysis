@@ -54,7 +54,8 @@ class RealVolumeTests(unittest.TestCase):
         actual = {p: set() for p in parents}
         stores = {p["profile_id"]: p["store"] for p in self.summary["profiles"]}
         traces = samples = 0
-        self.assertEqual(len(self.catalog["partitions"]), 4)
+        combined = all(p["partition_id"] in parents for p in self.catalog["partitions"])
+        self.assertEqual(len(self.catalog["partitions"]), 2 if combined else 4)
         for product in self.catalog["partitions"]:
             root = self.root / product["path"]
             selection = json.loads((root / "selection.json").read_text())
@@ -88,13 +89,16 @@ class RealVolumeTests(unittest.TestCase):
                 self.assertIsNone(cube.attrs["plot_id"])
                 self.assertIsNone(cube.attrs["calibration"])
                 groups = {r["direction_group"] for r in cube.attrs["acquisition_audit"]}
-                self.assertEqual(len(groups), 1)
+                combined = product["partition_id"] in ("grid-01", "grid-02")
+                self.assertEqual(len(groups), 2 if combined else 1)
                 self.assertNotIn("unknown", groups)
                 self.assertTrue(cube.signed_amplitude_valid.values.any())
                 self.assertFalse(cube.envelope_valid.values.any())
-                self.assertFalse(cube.rms_valid.values.any())
+                window_rms = cube.attrs["attribute_options"].get("rms_clipping_policy") == "window"
+                self.assertEqual(bool(cube.rms_valid.values.any()), window_rms)
                 self.assertTrue(np.isnan(cube.envelope.values).all())
-                self.assertTrue(np.isnan(cube.rms.values).all())
+                if not window_rms:
+                    self.assertTrue(np.isnan(cube.rms.values).all())
                 mask = cube.signed_amplitude_valid.values
                 self.assertTrue((support.signed_amplitude_line_count.values[mask] >= 2).all())
                 for name in ("geographic_export", "depth_and_thickness", "absolute_elevation"):
@@ -130,12 +134,42 @@ class RealVolumeTests(unittest.TestCase):
                     self.assertAlmostEqual(
                         float(cube.signed_amplitude.values[v, y, x]), expected, places=6
                     )
+                if window_rms:
+                    valid = np.argwhere(cube.rms_valid.values)
+                    half = cube.attrs["attribute_options"]["rms_samples"] // 2
+                    for v, y, x in valid[np.linspace(0, len(valid) - 1, 12, dtype=int)]:
+                        expected = 0.0
+                        for b, weight in zip(
+                            support.rms_bin.values[v, y, x],
+                            support.rms_weight.values[v, y, x],
+                            strict=True,
+                        ):
+                            if not weight:
+                                continue
+                            value = 0.0
+                            for member in bins[b]["members"]:
+                                p, traces = natives[(member["source_id"], member["profile_id"])]
+                                i = traces[member["trace_id"]]
+                                self.assertGreaterEqual(v, half)
+                                self.assertLess(v + half, p.sizes["sample"])
+                                self.assertFalse(
+                                    p.adc_limit_mask.values[i, v - half : v + half + 1].any()
+                                )
+                                window = p.amplitude.values[i, v - half : v + half + 1].astype(
+                                    float
+                                )
+                                value += member["weight"] * np.sqrt(np.mean(window**2))
+                            expected += weight * value
+                        self.assertAlmostEqual(float(cube.rms.values[v, y, x]), expected, places=6)
 
-    def test_signed_whole_line_holdouts_are_reported_with_coverage(self):
+    def test_whole_line_holdouts_are_reported_with_coverage(self):
         for product in self.catalog["partitions"]:
             root = self.root / product["path"]
             report = json.loads((root / "evaluation.json").read_text())
-            self.assertEqual(report["attribute"], "signed_amplitude")
+            self.assertEqual(
+                report["attribute"],
+                "rms" if product["partition_id"] in ("grid-01", "grid-02") else "signed_amplitude",
+            )
             self.assertEqual(report["fold_unit"], "whole_line")
             self.assertFalse(report["field_validation"])
             self.assertTrue(report["folds"])

@@ -317,6 +317,38 @@ class AttributeAndSelectionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             native_attributes(p)
 
+    def test_rms_checks_exact_window_clipping_edges_and_upstream_spread(self):
+        p = self.profiles[0].copy(deep=True)
+        p.amplitude.values[:] = np.arange(p.sizes["sample"], dtype=float)
+        p.adc_limit_mask.values[:] = False
+        p.adc_limit_mask.values[:, 20] = True
+        result = native_attributes(p)
+        self.assertTrue(np.isnan(result["envelope"]).all())
+        self.assertTrue(np.isnan(result["rms"][:, :2]).all())
+        self.assertTrue(np.isnan(result["rms"][:, -2:]).all())
+        self.assertTrue(np.isnan(result["rms"][:, 18:23]).all())
+        for sample in (2, 17, 23, 40):
+            expected = np.sqrt(np.mean(np.arange(sample - 2, sample + 3, dtype=float) ** 2))
+            np.testing.assert_allclose(result["rms"][:, sample], expected)
+        legacy = native_attributes(p, AttributeOptions(rms_clipping_policy="trace"))
+        self.assertTrue(np.isnan(legacy["rms"]).all())
+        p.attrs["clipping_can_spread_across_windows"] = True
+        filtered = native_attributes(p)
+        self.assertTrue(np.isnan(filtered["rms"]).all())
+        self.assertTrue(np.isnan(filtered["signed_amplitude"]).all())
+
+    def test_rms_gap_and_single_sample_window(self):
+        p = self.profiles[0].copy(deep=True)
+        p.amplitude.values[:] = -3
+        p.adc_limit_mask.values[:] = False
+        p.adc_limit_mask.values[:, 10] = True
+        result = native_attributes(p)
+        self.assertTrue(np.isnan(result["rms"][:, 8:13]).all())
+        np.testing.assert_allclose(result["rms"][:, 13:-2], 3)
+        result = native_attributes(p, AttributeOptions(rms_samples=1))
+        np.testing.assert_allclose(result["rms"][:, 0], 3)
+        self.assertTrue(np.isnan(result["rms"][:, 10]).all())
+
     def test_selections_hash_exact_namespaces_policies_and_geometry(self):
         selected = freeze_selection(
             "one",
@@ -425,10 +457,60 @@ class AttributeAndSelectionTests(unittest.TestCase):
                 AttributeOptions(),
                 {},
             )
+        data.update(
+            direction_policy="combine_reviewed",
+            combination_evidence="Analyst requests both crossing directions in one diagnostic grid",
+        )
+        rows, _, _, _, _, _, attrs = _prepare(
+            pair,
+            {"partition_id": "one-grid"},
+            self.plots,
+            data,
+            GridOptions(),
+            AttributeOptions(),
+            {},
+        )
+        self.assertEqual(len(rows), sum(p.sizes["trace"] for p in pair))
+        self.assertEqual(len({a["direction_group"] for a in attrs["acquisition_audit"]}), 2)
+        self.assertEqual(attrs["partition_id"], "one-grid")
 
 
 @unittest.skipUnless(HAS_VOLUME, "Requires scientific extras")
 class VolumeWorkflowTests(unittest.TestCase):
+    def test_collection_builder_preserves_crossing_parent_membership(self):
+        from soil_sensing.volumes.collection import collection_volume_run
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            summary = {
+                "profiles": [
+                    {
+                        "profile_id": p,
+                        "gps_geometry": {"source_id": "fixture"},
+                        "store": f"profiles/{p}/quantitative.zarr",
+                    }
+                    for p in ("XLINE", "YLINE")
+                ],
+                "diagnostic_partitions": [
+                    {
+                        "partition_id": "one-grid",
+                        "lines": [["fixture", "XLINE"], ["fixture", "YLINE"]],
+                    }
+                ],
+            }
+            (root / "collection_summary.json").write_text(json.dumps(summary))
+            with (
+                patch("soil_sensing.volumes.collection.verify_run"),
+                patch("soil_sensing.volumes.collection.volume_run") as run,
+            ):
+                collection_volume_run(root, root / "rebuilt", ["one-grid"], "Joint review")
+                run.assert_called_once()
+            config, _, _, attributes = load_volume_config(root / "rebuilt.toml")
+            self.assertEqual(config["direction_policy"], "combine_reviewed")
+            self.assertEqual(config["partitions"], summary["diagnostic_partitions"])
+            self.assertEqual(attributes.rms_clipping_policy, "window")
+            self.assertEqual(config["evaluation_attribute"], "rms")
+
     def test_two_partition_roundtrip_layers_viewer_and_geographic_exports(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

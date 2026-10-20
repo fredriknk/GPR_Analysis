@@ -4,6 +4,7 @@ No Plotly volume/isosurface topology is trusted across unknown voxels. Slices
 use explicit faces with four valid corners. Scientific arrays are never coarsened.
 """
 
+import base64
 import json
 import math
 import shutil
@@ -36,6 +37,16 @@ def _safe(value):
     return value
 
 
+def packed_array(values):
+    """Lossless little-endian float64 transport; keep NaNs without JSON expansion."""
+    values = np.asarray(values, dtype="<f8")
+    return {
+        "encoding": "float64-le-base64",
+        "shape": list(values.shape),
+        "data": base64.b64encode(values.tobytes()).decode("ascii"),
+    }
+
+
 def conservative_preview_mask(mask, step):
     """A hidden unsupported native voxel must not disappear through display stride."""
     if step == 1:
@@ -51,9 +62,9 @@ def write_volume_viewer(volume_root, output, *, interpretations=(), preview=None
     preview = preview or {}
     if set(preview) - {"max_voxels", "max_payload_mb", "max_native_samples", "partition_ids"}:
         raise ValueError("Unknown volume preview option")
-    max_voxels = preview.get("max_voxels", 60_000)
+    max_voxels = preview.get("max_voxels", 2_000_000)
     max_native = preview.get("max_native_samples", 1_000_000)
-    max_payload = preview.get("max_payload_mb", 30.0)
+    max_payload = preview.get("max_payload_mb", 100.0)
     if (
         any(type(v) is not int or v <= 0 for v in (max_voxels, max_native))
         or not np.isfinite(max_payload)
@@ -127,7 +138,7 @@ def write_volume_viewer(volume_root, output, *, interpretations=(), preview=None
                 "distance_m": profile.distance_m.values.tolist(),
                 "xy": xy.tolist(),
                 "time": profile.twt_ns.values.tolist(),
-                "amplitude": profile.amplitude.values.tolist(),
+                "amplitude": packed_array(profile.amplitude.values),
                 "position_status": profile.position_status.values.tolist(),
                 "quality_flags": profile.quality_flags.values.tolist(),
             }
@@ -289,7 +300,16 @@ def write_volume_viewer(volume_root, output, *, interpretations=(), preview=None
                 x=cube.x.values,
                 y=cube.y.values,
                 vertical=cube.vertical.values,
-                attributes={n: cube[n].values for n in ATTRIBUTES},
+                native_samples=cube.native_sample.values,
+                attributes={n: packed_array(cube[n].values) for n in ATTRIBUTES},
+                statistics={
+                    n: {
+                        "supported": int(np.isfinite(cube[n].values).sum()),
+                        "total": int(cube[n].size),
+                        "coverage_by_sample": np.isfinite(cube[n].values).sum(axis=(1, 2)),
+                    }
+                    for n in ATTRIBUTES
+                },
                 source_profiles=sources,
                 interpretations=objects,
                 preview_step=step,
@@ -320,5 +340,5 @@ def write_volume_viewer(volume_root, output, *, interpretations=(), preview=None
     return {
         "payload_bytes": len(encoded.encode()),
         "partition_count": len(scenes),
-        "renderer": "explicit_four_corner_masked_slices",
+        "renderer": "supported_eight_corner_voxel_boundaries_and_masked_slices",
     }

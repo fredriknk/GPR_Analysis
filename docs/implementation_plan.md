@@ -377,6 +377,18 @@ do not establish field calibration or interpretation accuracy.
 
 ## Field metadata to collect
 
+M7 real-data makeover: complete parent-grid reconstruction now retains crossing
+directions under an explicit combination choice. Window-supported RMS replaces
+whole-trace RMS exclusion by default, with the legacy policy configurable.
+The offline viewer adds actual supported 3D cell geometry, cutaways and plan maps,
+responsive controls, lossless payloads and explicit unavailable states. The
+opt-in command is `python scripts/build_real_volumes.py --inputs <collection-run>
+--output <new-run> --partition <grid-id> --combination-evidence <review-choice>`.
+Tests, real-data measurements and remaining limits are recorded in
+[volume_makeover.md](volume_makeover.md). This supersedes the four-direction-group
+delivery above; no field calibration or interpretation validation is implied.
+
+
 Plot boundaries/control/CRS, instrument settings, line spacing/direction, antenna/GNSS
 offsets, fix quality and datum, timestamps/weather, sample coordinates and uncertainty,
 depth intervals, laboratory particle-size methods, repeats, bulk density/moisture

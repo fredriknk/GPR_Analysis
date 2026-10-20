@@ -387,9 +387,13 @@ stencil caches and serialization separately from preview payload limits.
 
 Envelope is the magnitude of SciPy Hilbert on contiguous native segments with
 recorded reflection padding, minimum length and excluded edges. ADC-contaminated
-traces are wholly excluded from envelope/RMS. Signed samples have their own mask;
-filters that spread clipping exclude the whole signed trace too. RMS uses an
-explicit odd native-sample window. Display gain/background removal never feeds
+traces are wholly excluded from envelope. RMS uses an explicit odd native-sample
+window and defaults to `rms_clipping_policy="window"`: every contributing sample
+must be finite and unclipped, and windows cannot extend beyond trace edges.
+`"trace"` retains the legacy whole-trace RMS exclusion. ADC flags without located
+sample masks exclude the whole trace. Filters that spread clipping also exclude
+the whole trace for signed amplitude and RMS. Policy/window size are frozen in
+selection geometry and cube metadata. Display gain/background removal never feeds
 these products. Horizontal support reuses whole-triangle domain/holes, hull,
 edge/distance rules and adds minimum distinct-line support. Track segments break
 at missing/rejected positions and configured gaps. Holdouts rebuild bins, stencils
@@ -467,13 +471,18 @@ and their vertical values remain in companion GeoPackage/JSON, preserving object
 that overlap at different times. GeoPackage geometries and raster orientation/
 centres/values are reopened and checked.
 
-Volume HTML embeds precomputed preview arrays and full B-scans and bundles local
-Plotly assets. Only complete valid four-corner slice/shell cells receive faces;
+Volume HTML embeds lossless little-endian float64/base64 preview arrays and full
+B-scans, and bundles local Plotly assets. Supported-cell volumes require eight
+finite corners and complete horizontal domain containment; internal faces are
+removed. Thresholding selects cells by mean absolute corner amplitude. Exterior
+faces are display closures, not inferred soil boundaries or smooth isosurfaces.
+Only complete valid four-corner slice/shell cells receive faces;
 unknown holes stay absent. Scientific ZIP downloads retain full arrays, support,
 native sources and matching interpretation meshes. Preview stride, display opacity,
-thresholds and cameras never change scientific exports. Custom contributor or
-position selections hide derived layers and download a `reconstruction_request`;
-reconstruction is a new Python run. View JSON is bound to its viewer hash and
+thresholds and cameras never change scientific exports. Source-track/position
+visibility filters do not change the frozen cube; the UI states this explicitly.
+They can download a `reconstruction_request`; reconstruction is a new Python run.
+View JSON includes source, contrast and volume interval, is bound to its viewer hash and
 validates scenes, axes, layers, camera and controls before restoration.
 
 Optional `preview.partition_ids` is a nonempty list of unique existing complete

@@ -1,6 +1,35 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {maskedMesh,sameSelection,validateView,defaultAttribute} = require('../src/soil_sensing/visualization/assets/volume.js');
+const {voxelMesh,unpack,statistics} = require('../src/soil_sensing/visualization/assets/volume.js');
+
+test('volume draws closed supported cells and removes internal faces',()=>{
+  const data=Array.from({length:2},()=>Array.from({length:2},()=>[3,3,3]));
+  const mesh=voxelMesh([0,1,2],[0,1],[0,1],data,[[true,true]],2);
+  assert.equal(mesh.cellCount,2);
+  assert.equal(mesh.i.length,20); // ten exterior quads, no shared internal face
+  assert.equal(voxelMesh([0,1,2],[0,1],[0,1],data,[[true,true]],4).i.length,0);
+  data[1][1][2]=NaN;
+  assert.equal(voxelMesh([0,1,2],[0,1],[0,1],data,[[true,true]],2).cellCount,1);
+  assert.equal(voxelMesh([0,1,2],[0,1],[0,1],data,[[false,true]],2).cellCount,0);
+});
+
+test('volume interval and null corners cannot bridge unsupported cells',()=>{
+  const data=Array.from({length:3},()=>[[2,2],[2,2]]);
+  assert.equal(voxelMesh([0,1],[0,1],[0,1,2],data,[[true]],0,1,2).cellCount,1);
+  data[1][0][0]=null;
+  assert.equal(voxelMesh([0,1],[0,1],[0,1,2],data,[[true]],0).cellCount,0);
+});
+
+test('lossless packed transport preserves NaNs and late samples set colour limits',()=>{
+  const buffer=Buffer.alloc(32);[1,NaN,-2,1e9].forEach((v,i)=>buffer.writeDoubleLE(v,i*8));
+  const array=unpack({encoding:'float64-le-base64',shape:[1,2,2],data:buffer.toString('base64')});
+  assert.equal(array[0][1][1],1e9);assert(Number.isNaN(array[0][0][1]));
+  assert.throws(()=>unpack({encoding:'float64-le-base64',shape:[9],data:buffer.toString('base64')}));
+  const data=[[[null,null]],[[3,9]],[[2,7]]];
+  assert.equal(statistics(data).best,1);assert.equal(statistics(data).count,4);
+  assert.equal(defaultAttribute({rms:data,envelope:data,signed_amplitude:data}),'rms');
+});
 
 test('clipped envelope defaults to a supported attribute without fabricating data',()=>{
   const missing=[[[null,null],[null,null]]];
