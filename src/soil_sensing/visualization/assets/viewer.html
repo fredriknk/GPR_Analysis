@@ -28,8 +28,8 @@ display:grid;grid-template-columns:1fr 1fr;gap:15px}#plot{height:650px;flex:auto
 </style><script src="assets/plotly.min.js"></script></head><body>
 <header><div><h1>Plot Explorer</h1><p>Soil sensing / radar observations & spatial support</p></div>
 <span id="badge" class="badge"></span></header><main><aside><div>
-<label for="plotSelect">Plot / acquisition session</label><select id="plotSelect"></select>
-<label for="mode">Comparison</label><select id="mode"><option value="single">Selected plot</option>
+<label for="plotSelect">Scene / acquisition group</label><select id="plotSelect"></select>
+<label for="mode">Comparison</label><select id="mode"><option value="single">Selected scene</option>
 <option value="overview">Four-plot plan overview</option></select>
 <label for="slice">Time / depth gate</label><input id="slice" type="range" min="0" value="0" step="1">
 <div class="row"><button id="play">Play slices</button><button id="save">Save view</button></div>

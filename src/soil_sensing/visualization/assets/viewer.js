@@ -16,13 +16,16 @@ o.textContent=s.plot_id+' / '+(s.survey_id||'session unknown');$('plotSelect').a
 $('slice').max=data.gates.length-1;
 $('slice').value=data.view_defaults.gate;
 $('badge').textContent=data.synthetic?'SYNTHETIC DATA · DEMONSTRATION':
+  data.scenes.some(s=>s.coordinate_mode==='raw_gps_relative')?'UNVERIFIED GPS LAYOUT · DIAGNOSTIC':
   data.scenes.every(s=>s.diagnostic)?'DIAGNOSTIC LINE REVIEW':'REVIEWED PLOT GEOMETRY';
 if(data.scenes.some(s=>s.diagnostic))$('mode').options[1].disabled=true;
 function trace(scene,type,extra){return Object.assign({type,scene,showlegend:false},extra)}
 function layers(s, scene, gate, overview){
   const out=[], mid=(data.gates[gate][0]+data.gates[gate][1])/2;
   let amplitudeScaleShown=false;
-  const hover='East %{x:.1f} m · North %{y:.1f} m<extra></extra>';
+  const gps=s.coordinate_mode==='raw_gps_relative';
+  const hover=(gps?'Approx. east offset':'East')+' %{x:.1f} m · '+
+    (gps?'approx. north offset':'North')+' %{y:.1f} m<extra></extra>';
   if($('boundary').checked){
     const b=[...s.boundary,s.boundary[0]];
     out.push(trace(scene,'scatter3d',{mode:'lines',x:b.map(p=>p[0]),y:b.map(p=>p[1]),z:b.map(()=>0),
@@ -33,7 +36,8 @@ function layers(s, scene, gate, overview){
       textposition:'top center',line:{color:'#e8f1f7',width:5},hoverinfo:'skip'}));
   }
   if(!overview){for(const c of s.curtains){
-    const allowed=c.position_status.map(v=>$('samples').value==='all'||v==='measured'||s.diagnostic);
+    const allowed=c.position_status.map(v=>$('samples').value==='all'||v==='measured'||
+      s.coordinate_mode==='odometer');
     const x=c.xy.map((p,i)=>allowed[i]?p[0]:null), y=c.xy.map((p,i)=>allowed[i]?p[1]:null);
     if($('tracks').checked)out.push(trace(scene,'scatter3d',{meta:{layer:'tracks'},mode:'lines',x,y,z:x.map(()=>0),
       connectgaps:false,line:{color:'#75e3c2',width:3},customdata:c.trace_ids,
@@ -70,7 +74,7 @@ function layers(s, scene, gate, overview){
     }));
   }
   if($('measured').checked){const rows=s.observations[gate].filter(r=>
-    $('samples').value==='all'||r.position_status==='measured'||s.diagnostic);
+    $('samples').value==='all'||r.position_status==='measured'||s.coordinate_mode==='odometer');
     out.push(trace(scene,'scatter3d',{meta:{layer:'measured'},mode:'markers',x:rows.map(r=>r.xy[0]),y:rows.map(r=>r.xy[1]),
       z:rows.map(()=>-mid),customdata:rows.map(r=>[r.trace_id,r.position_status,r.quality_flags,r.time_utc]),
       marker:{size:3,color:rows.map(r=>r.value),cmin:0,cmax:data.rms_limit,colorscale:'Viridis',
@@ -101,8 +105,10 @@ function sceneLayout(s,domain){const ns=data.gate_unit==='ns';
   const factor=Number($('exaggeration').value)||1;
   return {domain,camera,uirevision:cameraRevision,aspectmode:'manual',aspectratio:{x:w/scale,y:Math.max(h/scale,.1),
     z:(ns?.65:end/scale)*factor},bgcolor:'#0c141d',
-    xaxis:{title:{text:s.diagnostic?'Along-line distance (m)':'Local east (m)'},gridcolor:'#283b4c'},
-    yaxis:{title:{text:s.diagnostic?'Schematic cross-line (m)':'Local north (m)'},gridcolor:'#283b4c'},
+    xaxis:{title:{text:s.coordinate_mode==='raw_gps_relative'?'Approx. east offset (m)':
+      s.diagnostic?'Along-line distance (m)':'Local east (m)'},gridcolor:'#283b4c'},
+    yaxis:{title:{text:s.coordinate_mode==='raw_gps_relative'?'Approx. north offset (m)':
+      s.diagnostic?'Schematic cross-line (m)':'Local north (m)'},gridcolor:'#283b4c'},
     zaxis:{title:{text:ns?(data.vertical_axis==='recording_time'?'Recording time (ns)':'Corrected time (ns)'):
       'Calibrated depth (m)'},range:[-end,0],tickvals:[-end,-end/2,0],
       ticktext:[end.toFixed(1),(end/2).toFixed(1),'0'],gridcolor:'#283b4c'}};
@@ -147,13 +153,18 @@ async function render(){
     $('metric').textContent='Quantitative RMS · '+data.attribute_unit;
     ['top','oblique','side','reset','exaggeration'].forEach(id=>$(id).disabled=overview);
     $('status').textContent=(overview?'Plan overview · independent local coordinates · shared scale. Select a plot for 3D rotation. ':'')+
-      (s.diagnostic?'Diagnostic odometer coordinates; no geographic grid. ':s.crs+' · world origin '+s.origin_xy_m.join(', ')+' m. ')+
+      (s.coordinate_mode==='raw_gps_relative'?
+        'Approximate layout from raw NMEA coordinates; datum/CRS unverified; no geographic grid. ':
+        s.diagnostic?'Diagnostic odometer coordinates; no geographic grid. ':
+        s.crs+' · world origin '+s.origin_xy_m.join(', ')+' m. ')+
       'Ground plane assumed flat at 0 · vertical display ×'+$('exaggeration').value+
       (data.gate_unit==='ns'?' (time aspect is schematic). ':'. ')+
       s.quality.excluded_positions+' positions excluded · '+s.quality.excluded_windows+' signal windows excluded. '+
       (g?'Supported slice '+(100*g.coverage[gate]).toFixed(1)+'% · '+data.method+'. ':'')+
       'GPS position filtering changes measured layers only; grids retain saved support.';
-    $('empty').textContent=!g?'Measured line review; gridding requires reviewed plot geometry.':
+    $('empty').textContent=!g?(s.coordinate_mode==='raw_gps_relative'?
+      'Recorded GPS line layout; gridding requires reviewed datum, CRS and plot geometry.':
+      'Measured line review; gridding requires reviewed plot geometry.'):
       !g.coverage[gate]?'No supported surface in this gate. Measured tracks and curtains remain available.':'';
     const viewSignature=JSON.stringify([selected,overview,$('samples').value,
       $('exaggeration').value,...toggles.map(id=>$(id).checked)]);

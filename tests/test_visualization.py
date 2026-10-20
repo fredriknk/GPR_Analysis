@@ -222,8 +222,48 @@ class SceneTests(unittest.TestCase):
         diagnostic = self.scene([profile], diagnostic=True)
         self.assertIsNone(diagnostic.crs)
         self.assertTrue(diagnostic.diagnostic)
+        self.assertEqual(diagnostic.coordinate_mode, "odometer")
         with self.assertRaisesRegex(ValueError, "time zero"):
             self.scene(vertical_axis="depth")
+
+    def test_raw_gps_layout_combines_lines_without_claiming_a_crs(self):
+        profiles = []
+        for index, original in enumerate(self.profiles[:2]):
+            profile = original.copy(deep=True)
+            profile.attrs.update(plot_id=None, survey_id=None, assignment=None, source_crs=None)
+            profile["latitude_deg"] = (
+                "trace",
+                59.66 + (profile.y_m.values - np.nanmin(profile.y_m.values)) / 111_320,
+                {"datum": "unknown"},
+            )
+            profile["longitude_deg"] = (
+                "trace",
+                10.75
+                + (profile.x_m.values - np.nanmin(profile.x_m.values))
+                / (111_320 * np.cos(np.deg2rad(59.66))),
+                {"datum": "unknown"},
+            )
+            profile.attrs["profile_id"] = f"gps-line-{index}"
+            profile["trace_id"] = (
+                "trace",
+                np.asarray([f"gps-line-{index}/{trace}" for trace in profile.trace_id.values]),
+            )
+            profiles.append(profile)
+        scene = build_scene(
+            profiles,
+            None,
+            [[30, 40]],
+            diagnostic=True,
+            gps_diagnostic=True,
+            trace_step=8,
+            sample_step=8,
+        )
+        self.assertEqual(scene.coordinate_mode, "raw_gps_relative")
+        self.assertIsNone(scene.crs)
+        self.assertEqual(len(scene.sources), 2)
+        self.assertGreaterEqual(len(scene.curtains), 2)
+        self.assertIn("datum, CRS", scene.coordinate_note)
+        self.assertEqual(len(scene.coordinate_anchor_latlon), 2)
 
     def test_calibrated_depth_retains_uncertainty_and_rejects_missing_evidence(self):
         profile = self.profiles[0].copy(deep=True)
@@ -361,7 +401,13 @@ class ExplorerRunTests(unittest.TestCase):
             root = Path(tmp)
             config = root / "scene.toml"
             base = 'schema_version="0.1"\nsynthetic=true\ngates=[[30,40]]\n'
-            for extra in ("typo=1\n", 'profiles=["field.zarr"]\n', '[grid]\nmethod="kriging"\n'):
+            for extra in (
+                "typo=1\n",
+                'profiles=["field.zarr"]\n',
+                '[grid]\nmethod="kriging"\n',
+                'diagnostic_layout="gps"\n',
+                "diagnostic_cluster_distance_m=0\n",
+            ):
                 config.write_text(base + extra)
                 with self.assertRaises(ValueError):
                     load_scene_config(config)
@@ -384,6 +430,60 @@ class ExplorerRunTests(unittest.TestCase):
                     ),
                     2,
                 )
+
+    def test_gps_diagnostic_clusters_nearby_lines_into_shared_scenes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            stores = []
+            for index, offset in enumerate((0.0, 0.0001, 0.02)):
+                profile = synthetic_plots()[0][0].copy(deep=True)
+                profile.attrs.update(
+                    plot_id=None,
+                    survey_id=None,
+                    assignment=None,
+                    source_crs=None,
+                    profile_id=f"gps-cluster-line-{index}",
+                )
+                profile["trace_id"] = (
+                    "trace",
+                    np.asarray(
+                        [f"gps-cluster-line-{index}/{trace}" for trace in profile.trace_id.values]
+                    ),
+                )
+                profile["latitude_deg"] = (
+                    "trace",
+                    59.66 + offset + (profile.y_m.values - np.nanmin(profile.y_m.values)) / 111_320,
+                    {"datum": "unknown"},
+                )
+                profile["longitude_deg"] = (
+                    "trace",
+                    10.75
+                    + (profile.x_m.values - np.nanmin(profile.x_m.values))
+                    / (111_320 * np.cos(np.deg2rad(59.66))),
+                    {"datum": "unknown"},
+                )
+                store = root / f"line-{index}.zarr"
+                save_profile(profile, store)
+                stores.append(store.name)
+            config = root / "gps.toml"
+            config.write_text(
+                'schema_version="0.1"\ndiagnostic=true\ndiagnostic_layout="gps"\n'
+                "diagnostic_cluster_distance_m=1000\nprofiles=["
+                + ",".join(json.dumps(store) for store in stores)
+                + "]\ngates=[[30,40]]\n[render]\ntrace_step=8\nsample_step=8\n"
+            )
+            output = root / "gps-viewer"
+            result = visualize_run(config, output)
+            self.assertEqual(result["scene_count"], 2)
+            scene = json.loads((output / "scene.json").read_text())
+            self.assertEqual(len(scene["scenes"][0]["source_profiles"]), 2)
+            self.assertEqual(
+                sorted(len(item["source_profiles"]) for item in scene["scenes"]), [1, 2]
+            )
+            self.assertTrue(
+                all(item["coordinate_mode"] == "raw_gps_relative" for item in scene["scenes"])
+            )
+            self.assertTrue(all(item["crs"] is None for item in scene["scenes"]))
 
 
 if __name__ == "__main__":

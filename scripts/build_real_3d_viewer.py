@@ -32,6 +32,13 @@ def main() -> None:
         type=Path,
         default=Path("configs/pipelines/gpr_baseline.toml"),
     )
+    parser.add_argument(
+        "--layout",
+        choices=("gps", "odometer"),
+        default="gps",
+        help="Combine nearby lines by raw GPS layout, or keep one odometer scene per line",
+    )
+    parser.add_argument("--cluster-distance-m", type=float, default=1000.0)
     args = parser.parse_args()
     root = args.root.resolve()
     processing_config = args.processing_config.resolve()
@@ -62,6 +69,8 @@ def main() -> None:
             "processing": asdict(options),
             "gps": asdict(GPSOptions()),
             "vertical_axis": "recording_time",
+            "diagnostic_layout": args.layout,
+            "diagnostic_cluster_distance_m": args.cluster_distance_m,
             "rms_gate_ns": [50.0, 90.0],
             "display_trace_step": 20,
             "display_sample_step": 4,
@@ -109,6 +118,8 @@ def main() -> None:
         config.write_text(
             'schema_version = "0.1"\n'
             "diagnostic = true\n"
+            f'diagnostic_layout = "{args.layout}"\n'
+            f"diagnostic_cluster_distance_m = {args.cluster_distance_m}\n"
             'vertical_axis = "recording_time"\n'
             "profiles = [\n" + profile_lines + "\n]\n"
             "gates = [[50.0, 90.0]]\n\n"
@@ -132,7 +143,11 @@ def main() -> None:
                 ),
                 "profiles": summaries,
                 "limitation": (
-                    "Independent odometer/recording-time diagnostic scenes; no relative "
+                    "Approximate relative layout from raw NMEA coordinates; no verified "
+                    "datum, geographic CRS, depth calibration, spatial interpolation, or "
+                    "soil inference"
+                    if args.layout == "gps"
+                    else "Independent odometer/recording-time diagnostic scenes; no relative "
                     "placement, geographic CRS, depth calibration, or soil inference"
                 ),
             },

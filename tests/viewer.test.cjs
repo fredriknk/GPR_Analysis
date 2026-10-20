@@ -119,10 +119,25 @@ test('layer toggles and support distance use separate units',async()=>{
 });
 
 test('diagnostic review never enables a geographic overview',async()=>{
-  const data=payload();data.scenes.forEach(s=>{s.diagnostic=true;s.grid=null;s.crs=null});
+  const data=payload();data.scenes.forEach(s=>{
+    s.diagnostic=true;s.grid=null;s.crs=null;s.coordinate_mode='odometer';
+  });
   const s=await setup(data);
   assert.ok(s.controls.get('mode').options[1].disabled);
   assert.match(s.controls.get('empty').textContent,/reviewed plot geometry/);
+});
+
+test('raw GPS diagnostic labels approximate geometry and filters interpolated positions',async()=>{
+  const data=payload();data.synthetic=false;data.scenes=data.scenes.slice(0,1);
+  Object.assign(data.scenes[0],{diagnostic:true,grid:null,crs:null,
+    coordinate_mode:'raw_gps_relative',coordinate_note:'unverified'});
+  const s=await setup(data);
+  assert.match(s.controls.get('badge').textContent,/UNVERIFIED GPS LAYOUT/);
+  assert.match(s.renders.at(-1).layout.scene.xaxis.title.text,/Approx. east offset/);
+  assert.match(s.controls.get('status').textContent,/raw NMEA/);
+  await s.change('samples','measured');
+  const curtain=s.renders.at(-1).traces.find(t=>t.meta?.layer==='curtain');
+  assert.equal(curtain.x[0][1],null);
 });
 
 test('combined curtains and tracks keep explicit gaps and trace identity',async()=>{

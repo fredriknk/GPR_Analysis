@@ -27,6 +27,9 @@ class Scene:
     geometry_evidence: str | None = None
     synthetic: bool = False
     diagnostic: bool = False
+    coordinate_mode: str = "projected"
+    coordinate_note: str | None = None
+    coordinate_anchor_latlon: list[float] | None = None
     curtains: list = field(default_factory=list)
     observations: list = field(default_factory=list)
     sources: list = field(default_factory=list)
@@ -52,6 +55,9 @@ class Scene:
             "source_profiles": self.sources,
             "synthetic": self.synthetic,
             "geometry_evidence": self.geometry_evidence,
+            "coordinate_mode": self.coordinate_mode,
+            "coordinate_note": self.coordinate_note,
+            "coordinate_anchor_latlon": self.coordinate_anchor_latlon,
         }
 
 
@@ -111,6 +117,18 @@ def axis_values(profile, vertical_axis):
     return profile.depth_m.values
 
 
+def raw_gps_relative_xy(profile, anchor_latlon):
+    """Approximate local offsets for diagnostic display; this is not a CRS transform."""
+    if "latitude_deg" not in profile or "longitude_deg" not in profile:
+        raise ValueError("GPS-layout diagnostics require parsed latitude/longitude")
+    latitude = profile.latitude_deg.values.astype(float)
+    longitude = profile.longitude_deg.values.astype(float)
+    anchor_lat, anchor_lon = anchor_latlon
+    north = (latitude - anchor_lat) * 111_320.0
+    east = (longitude - anchor_lon) * 111_320.0 * np.cos(np.deg2rad(anchor_lat))
+    return np.c_[east, north]
+
+
 def _features(profile, gates, vertical_axis):
     """Reuse M3 quality rules for each selected gate; never grid display gain."""
     axis = axis_values(profile, vertical_axis)
@@ -150,6 +168,7 @@ def build_scene(
     max_track_gap_m=6.0,
     synthetic=False,
     diagnostic=False,
+    gps_diagnostic=False,
 ):
     validate_gates(gates)
     if not profiles:
@@ -171,13 +190,56 @@ def build_scene(
             raise ValueError("Incompatible axes; explicit reviewed resampling is required")
         if profile.attrs["survey_id"] != first.attrs["survey_id"]:
             raise ValueError("Never merge unrelated surveys into a scene")
+    if gps_diagnostic and not diagnostic:
+        raise ValueError("GPS-layout diagnostics require diagnostic mode")
+    coordinate_mode = "projected"
+    coordinate_note = None
+    coordinate_anchor = None
     if diagnostic:
-        if len(profiles) != 1:
+        if not gps_diagnostic and len(profiles) != 1:
             raise ValueError("Diagnostic scenes contain exactly one line")
-        length = max(float(first.distance_m.values[-1]), 1.0)
-        boundary = [[0, -1], [length, -1], [length, 1], [0, 1]]
+        if gps_diagnostic:
+            accepted = []
+            for profile in profiles:
+                good = np.isfinite(profile.latitude_deg.values) & np.isfinite(
+                    profile.longitude_deg.values
+                )
+                good &= np.isin(profile.position_status.values, ["measured", "interpolated"])
+                if not good.any():
+                    raise ValueError("Every GPS-layout line requires an accepted position")
+                accepted.append(
+                    np.c_[profile.latitude_deg.values[good], profile.longitude_deg.values[good]]
+                )
+            coordinates = np.concatenate(accepted)
+            coordinate_anchor = np.nanmedian(coordinates, axis=0).astype(float).tolist()
+            all_xy = np.concatenate(
+                [raw_gps_relative_xy(profile, coordinate_anchor) for profile in profiles]
+            )
+            finite = np.isfinite(all_xy).all(axis=1)
+            lower, upper = np.min(all_xy[finite], axis=0), np.max(all_xy[finite], axis=0)
+            pad = max(2.0, 0.02 * float(np.max(upper - lower)))
+            boundary = [
+                [lower[0] - pad, lower[1] - pad],
+                [upper[0] + pad, lower[1] - pad],
+                [upper[0] + pad, upper[1] + pad],
+                [lower[0] - pad, upper[1] + pad],
+            ]
+            coordinate_mode = "raw_gps_relative"
+            coordinate_note = (
+                "Approximate small-area offsets derived from raw NMEA latitude/longitude; "
+                "datum, CRS and positional accuracy are unverified"
+            )
+            plot_id = (
+                f"GPS diagnostic: {len(profiles)} lines near "
+                f"{coordinate_anchor[0]:.5f}, {coordinate_anchor[1]:.5f}"
+            )
+        else:
+            length = max(float(first.distance_m.values[-1]), 1.0)
+            boundary = [[0, -1], [length, -1], [length, 1], [0, 1]]
+            coordinate_mode = "odometer"
+            coordinate_note = "Independent odometer line; no geographic placement"
+            plot_id = f"Diagnostic: {first.attrs['source_id']}/{first.attrs['profile_id']}"
         origin, crs = [0.0, 0.0], None
-        plot_id = f"Diagnostic: {first.attrs['source_id']}/{first.attrs['profile_id']}"
     else:
         if plot is None or plot.status != "reviewed" or not plot.polygon or not plot.evidence:
             raise ValueError("Plot scenes require reviewed geometry, CRS and assignment evidence")
@@ -223,6 +285,9 @@ def build_scene(
         geometry_evidence=plot.evidence if not diagnostic else None,
         synthetic=synthetic,
         diagnostic=diagnostic,
+        coordinate_mode=coordinate_mode,
+        coordinate_note=coordinate_note,
+        coordinate_anchor_latlon=coordinate_anchor,
         observations=[[] for _ in gates],
         quality={"total_traces": 0, "excluded_positions": 0, "excluded_windows": 0},
     )
@@ -247,7 +312,12 @@ def build_scene(
                 },
             }
         )
-        if diagnostic:
+        if gps_diagnostic:
+            xy = raw_gps_relative_xy(profile, coordinate_anchor)
+            located = np.isfinite(xy).all(axis=1) & np.isin(
+                profile.position_status.values, ["measured", "interpolated"]
+            )
+        elif diagnostic:
             xy = np.c_[profile.distance_m.values, np.zeros(profile.sizes["trace"])]
             located = np.ones(len(xy), dtype=bool)
         else:

@@ -178,20 +178,25 @@ existing evidenced physical time zero and velocity calibration, with metre gates
 `recording_time` and `corrected_time` use ns and never imply physical depth.
 
 For unassigned lines, set `diagnostic=true`, omit `plots_file`, and provide up to
-100 quantitative stores. Each line is shown separately using odometer distance
-and a schematic cross-line axis; it receives no geographic grid or plot assignment.
-The current private test collection remains diagnostic.
+100 quantitative stores. The default `diagnostic_layout="odometer"` shows each
+line separately. `diagnostic_layout="gps"` groups nearby lines and places their
+curtains with approximate local east/north offsets derived from accepted raw NMEA
+latitude/longitude. Set `diagnostic_cluster_distance_m` explicitly for that review.
+GPS diagnostic scenes retain no claimed datum, CRS, plot assignment or geographic
+grid. The current private test collection remains diagnostic.
 
 To process every local DT1/HD/GPS set and build one selector containing all
 diagnostic 3D curtains:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/build_real_3d_viewer.py --root GPR_raw_data --output outputs/real-data-3d-all-new
+.\.venv\Scripts\python.exe scripts/build_real_3d_viewer.py --root GPR_raw_data --output outputs/real-data-3d-gps-grid-new
 ```
 
 The runner saves and exactly reopens every full-resolution quantitative store,
-then decimates only browser curtain geometry. Its output is local and ignored by
-Git. See [real_data_results.md](docs/real_data_results.md) for the verified run.
+then decimates only browser curtain geometry. GPS layout is the runner default;
+pass `--layout odometer` to retain one independent scene per line. Its output is
+local and ignored by Git. See [real_data_results.md](docs/real_data_results.md)
+for the verified run.
 
 The exporter writes `scene.json`, `evaluation.json`, `run.json`, and per-scene
 `scene-01/grid.zarr` / `support.json` (no grids for diagnostic lines). Nearest and

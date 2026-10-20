@@ -90,8 +90,11 @@ tools now support evidenced fraction fitting, prediction and spatial evaluation;
 field fitting remains gated by independent lab samples. See data_contracts.md.
 
 The explorer groups quantitative profiles by explicit plot/survey and namespaces
-source lines by source/profile identity. Unassigned profiles can only enter an
-explicit diagnostic odometer scene. Compatible quantitative profiles supply RMS
+source lines by source/profile identity. Unassigned profiles can enter an explicit
+diagnostic odometer scene or a raw-GPS relative-layout scene. The latter groups
+nearby profile centres and combines curtains using approximate small-area offsets,
+while keeping CRS, datum accuracy, plot identity and geographic gridding unresolved.
+Compatible quantitative profiles supply RMS
 gates through the existing M3 extractor. Vertical samples are selected without
 resampling, and incompatible axes or calibration are rejected. Geometry is rendered
 in local metric offsets with the world origin/CRS preserved. The current release

@@ -84,7 +84,46 @@ of recorded signals and acquisition quality; they do not identify soil texture,
 calibrated depths or production plot coverage. Missing GPS does not exclude a
 per-trace signal attribute, but prevents its geographic use.
 
-## All-recording 3D viewer
+## Combined recorded-GPS 3D viewer
+
+The current M4.5 diagnostic run positions all curtains from accepted raw NMEA
+coordinates and groups profile centres that are connected within 1,000 m. The
+verified local explorer is:
+
+`outputs/real-data-3d-gps-grid-2026-10-20-viewer-final/index.html`
+
+The 80 profiles are not one continuous grid. They form three disconnected scenes:
+the main 72-line acquisition, a five-line site near 60.46206° N / 10.61554° E and
+a three-line site near 60.35881° N / 10.46836° E. Combining all three in one axis
+would put the sites tens of kilometres apart and make the main grid unreadable.
+The selector keeps the sites separate while rendering every line at its recorded
+relative position within its site.
+
+The run retains 66,774 traces and 16,693,500 full-resolution signed amplitude
+samples. Its GPS audit contains 65,971 measured, nine interpolated, 758 missing and
+36 rejected positions. Browser geometry uses every twentieth trace and every fourth
+time sample, producing 219,555 curtain vertices and a 31,444,953-byte payload.
+The final viewer build took 40.0 seconds. The main grid opens first in the browser
+review and contains 72 source profiles in one rotatable scene.
+
+Coordinates are approximate small-area east/north offsets from a recorded
+latitude/longitude anchor. The source did not establish a reviewed datum, projected
+CRS, plot boundary or GPS accuracy, so `crs` remains null and no surface grid is
+interpolated. Recording time is vertical; it is not calibrated depth. Color is
+signed quantitative amplitude in ADC counts and does not imply a soil property.
+
+Reproduce the combined layout in a new output directory:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/build_real_3d_viewer.py --root GPR_raw_data --output outputs/real-data-3d-gps-grid-new
+```
+
+The all-data run saves and exactly reopens every quantitative Zarr store. The final
+viewer independently hashes those 80 stores and verifies its artifacts, clustering
+threshold and coordinate warning. All 67 Python tests, eight Node controller tests
+and Ruff pass.
+
+## Initial all-recording odometer 3D viewer
 
 The M4.5 viewer was run on every valid source profile on 2026-10-20. The verified
 local explorer is:

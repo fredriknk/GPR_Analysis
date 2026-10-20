@@ -59,6 +59,8 @@ def load_scene_config(path: Path):
         "schema_version",
         "synthetic",
         "diagnostic",
+        "diagnostic_layout",
+        "diagnostic_cluster_distance_m",
         "profiles",
         "plots_file",
         "vertical_axis",
@@ -74,6 +76,19 @@ def load_scene_config(path: Path):
         if type(data.get(name, False)) is not bool:
             raise ValueError(f"{name} must be Boolean")
     synthetic, diagnostic = data.get("synthetic", False), data.get("diagnostic", False)
+    diagnostic_layout = data.get("diagnostic_layout", "odometer")
+    if diagnostic_layout not in ("odometer", "gps"):
+        raise ValueError("diagnostic_layout must be odometer or gps")
+    if diagnostic_layout != "odometer" and not diagnostic:
+        raise ValueError("diagnostic_layout requires diagnostic=true")
+    cluster_distance = data.get("diagnostic_cluster_distance_m", 1000.0)
+    if (
+        isinstance(cluster_distance, bool)
+        or not isinstance(cluster_distance, (int, float))
+        or not np.isfinite(cluster_distance)
+        or cluster_distance <= 0
+    ):
+        raise ValueError("diagnostic_cluster_distance_m must be finite and positive")
     if "plots_file" in data and (not isinstance(data["plots_file"], str) or not data["plots_file"]):
         raise ValueError("plots_file must be a nonempty path string")
     if synthetic and (
@@ -121,9 +136,59 @@ def load_scene_config(path: Path):
     if len(set(resolved)) != len(resolved):
         raise ValueError("Duplicate input stores")
     data["profiles"] = resolved
+    data["diagnostic_layout"] = diagnostic_layout
+    data["diagnostic_cluster_distance_m"] = float(cluster_distance)
     if data.get("plots_file"):
         data["plots_file"] = (path.parent / data["plots_file"]).resolve()
     return data, GridOptions(**data.get("grid", {})), RenderOptions(**data.get("render", {}))
+
+
+def _gps_profile_center(profile):
+    if "latitude_deg" not in profile or "longitude_deg" not in profile:
+        raise ValueError("GPS-layout diagnostics require parsed latitude/longitude")
+    valid = np.isfinite(profile.latitude_deg.values) & np.isfinite(profile.longitude_deg.values)
+    valid &= np.isin(profile.position_status.values, ["measured", "interpolated"])
+    if not valid.any():
+        raise ValueError("Every GPS-layout line requires an accepted position")
+    return np.array(
+        [
+            np.nanmedian(profile.latitude_deg.values[valid]),
+            np.nanmedian(profile.longitude_deg.values[valid]),
+        ]
+    )
+
+
+def _gps_distance_m(left, right):
+    latitude = np.deg2rad((left[0] + right[0]) / 2)
+    return float(
+        np.hypot(
+            (left[0] - right[0]) * 111_320.0,
+            (left[1] - right[1]) * 111_320.0 * np.cos(latitude),
+        )
+    )
+
+
+def _gps_diagnostic_groups(profiles, cluster_distance_m):
+    """Connected components of profile centres for display-only site separation."""
+    centres = [_gps_profile_center(profile) for profile in profiles]
+    unseen = set(range(len(profiles)))
+    groups = []
+    while unseen:
+        seed = min(unseen)
+        unseen.remove(seed)
+        indices, frontier = {seed}, [seed]
+        while frontier:
+            left = frontier.pop()
+            neighbours = {
+                right
+                for right in unseen
+                if _gps_distance_m(centres[left], centres[right]) <= cluster_distance_m
+            }
+            unseen -= neighbours
+            indices |= neighbours
+            frontier.extend(neighbours)
+        groups.append([profiles[index] for index in sorted(indices)])
+    return sorted(groups, key=len, reverse=True)
 
 
 def _json_safe(value):
@@ -235,15 +300,21 @@ def visualize_run(config_path: Path, output: Path, *, progress=None):
             plots = load_plots(config["plots_file"]) if config.get("plots_file") else {}
             exclusions = {}
         groups, identities = {}, set()
-        for i, profile in enumerate(profiles):
+        for profile in profiles:
             identity = (profile.attrs["source_id"], profile.attrs["profile_id"])
             if identity in identities:
                 raise ValueError("Duplicate source profile across scene inputs")
             identities.add(identity)
-            key = (profile.attrs["plot_id"], profile.attrs["survey_id"])
-            if config.get("diagnostic"):
-                key = (i, None)
-            groups.setdefault(key, []).append(profile)
+            if not config.get("diagnostic"):
+                key = (profile.attrs["plot_id"], profile.attrs["survey_id"])
+                groups.setdefault(key, []).append(profile)
+        if config.get("diagnostic"):
+            diagnostic_groups = (
+                _gps_diagnostic_groups(profiles, config["diagnostic_cluster_distance_m"])
+                if config["diagnostic_layout"] == "gps"
+                else [[profile] for profile in profiles]
+            )
+            groups = {(index, None): group for index, group in enumerate(diagnostic_groups)}
         scene_limit = 100 if config.get("diagnostic") else 4
         if not 1 <= len(groups) <= scene_limit:
             raise ValueError(
@@ -288,6 +359,7 @@ def visualize_run(config_path: Path, output: Path, *, progress=None):
                 max_track_gap_m=render.max_track_gap_m,
                 synthetic=config.get("synthetic", False),
                 diagnostic=config.get("diagnostic", False),
+                gps_diagnostic=config.get("diagnostic_layout") == "gps",
             )
             actual_vertices = sum(len(c["xy"]) * len(c["vertical"]) for c in scene.curtains)
             rendered_vertices += actual_vertices

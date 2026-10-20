@@ -134,7 +134,7 @@ Synthetic adapter, validation, exclusion and repeatability tests pass. No real
 texture assays or secondary sensor files are supplied, so field joins and a
 specific EMI/GRS adapter remain pending. GRS meaning is still unconfirmed.
 
-## M4.5 — Interactive 3D Plot Explorer (implemented; synthetic browser review complete)
+## M4.5 — Interactive 3D Plot Explorer (implemented; synthetic and field diagnostic browser review complete)
 
 Dependencies: M2/M3 for field scenes; synthetic fixtures allow immediate development.
 M4 observation layers are optional. This intermediate milestone comes before M5.
@@ -203,8 +203,13 @@ Node controller tests now include combined-curtain gap/identity checks and plan
 overview masks. These controller tests supplement actual browser review.
 
 The supplied real lines still lack reviewed assignments/CRS/plot geometry and
-velocity evidence. They may enter explicit odometer-only diagnostic scenes, with
-no geographic grid. No texture inference or extra sensor adapter was invented.
+velocity evidence. They may enter explicit odometer diagnostics or combined
+raw-NMEA relative-layout diagnostics, with no geographic grid. A verified local
+run on 2026-10-20 grouped all 80 profiles into three spatially separate scenes:
+72 lines at the main site, five at a second site and three at a third. It preserved
+66,774 trace identities and 16,693,500 full-resolution amplitude samples, while
+the browser used 219,555 decimated curtain vertices. No texture inference or
+extra sensor adapter was invented.
 
 ## M5 — Calibrated texture inference (software implemented; field validation pending)
 

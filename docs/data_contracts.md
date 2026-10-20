@@ -207,8 +207,14 @@ status; depth curtains also retain sampled standard uncertainty. `view.json`
 exports camera, scene identity, plot/gate, layer flags, scale limits and vertical
 display factor, and can be restored only into the matching scene.
 
-Explicit `diagnostic=true` scenes use odometer x and schematic cross-line y,
-preserve missing geographic metadata, and have no CRS or geographic grid.
+Explicit `diagnostic=true` scenes have no geographic grid. The `odometer` layout
+uses odometer x and schematic cross-line y for one source line. The `gps` layout
+groups nearby profile centres, derives approximate small-area east/north offsets
+directly from accepted raw NMEA latitude/longitude, and records
+`coordinate_mode="raw_gps_relative"`, an anchor latitude/longitude and a warning
+that datum, CRS and positional accuracy are unverified. It does not project,
+interpolate, assign a production plot or fill missing positions. Both layouts
+preserve source position status and leave `crs` null.
 Explicit `synthetic=true` scenes use the versioned deterministic generator, with
 synthetic evidence/units and a visible demo badge. These modes cannot borrow field
 geometry implicitly. Extra sensors and soil predictions are not synthesized.

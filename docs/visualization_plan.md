@@ -236,10 +236,13 @@ The first plot's synthetic packet is centred near (65,50) m / 38 ns; the default
 gate contains it. Subsequent plots shift that event by 4 ns per plot.
 
 Diagnostic collection review supports up to 100 unassigned lines in one selector.
-Only the selected line is rendered in WebGL. Each line keeps its own odometer/time
-frame; the viewer does not invent relative field placement, plot assignment or
-geographic coordinates. Reviewed plot/session scenes and their comparison overview
-remain capped at four independent frames.
+Odometer layout keeps each line in an independent distance/time frame. Raw-GPS
+layout clusters nearby profile centres and renders compatible curtains together
+with approximate local offsets calculated from accepted NMEA latitude/longitude.
+It stores the anchor and displays an unverified-layout warning; it does not claim
+a datum, projected CRS, positional accuracy, plot assignment or geographic grid.
+Reviewed plot/session scenes and their comparison overview remain capped at four
+independent frames.
 
 Field scenes require existing quantitative stores and reviewed assignments and
 geometry. RMS is re-extracted through the M3 function rather than trusting an
@@ -331,18 +334,24 @@ and DOM-reported timings are retained under `outputs/browser-review-2026-10-20/`
 The sidebar scrolls independently so lower controls keep the plot visible. Cloud
 sharing is removed from the modebar. Private field data was not served.
 
-## Full real-data diagnostic run (2026-10-20)
+## Full real-data diagnostic runs (2026-10-20)
 
-Diagnostic scene selection now scales separately from the four-frame reviewed
-plot overview. `scripts/build_real_3d_viewer.py` processed all 80 DT1 profiles,
-66,774 traces and 16,693,500 samples into exact-round-trip quantitative stores,
-then built one offline selector with 80 independent odometer/time curtains. The
-viewer contains 212,814 decimated curtain vertices and a 30,195,154-byte payload;
-scene construction took 49.1 seconds. Seven controller tests pass with the same
-viewer code.
+Diagnostic scene selection scales separately from the four-frame reviewed plot
+overview. An initial odometer run processed all 80 DT1 profiles, 66,774 traces and
+16,693,500 samples into exact-round-trip quantitative stores, then built one
+offline selector with 80 independent line scenes. It contains 212,814 decimated
+curtain vertices and a 30,195,154-byte payload.
 
-The completed output is
-`outputs/real-data-3d-all-2026-10-20/viewer/index.html`. It is diagnostic only:
-no overview, geographic placement, depth calibration or soil-property inference
-is enabled. Full run evidence and commands are in
+The current raw-GPS run combines recorded lines by proximity rather than assigning
+them to production plots. It found three disconnected sites at the configured
+1,000 m threshold: a 72-line main grid and remote five-line and three-line groups.
+The three-scene viewer contains 219,555 rendered curtain vertices and a 31,444,953-
+byte payload; the final viewer build took 40.0 seconds. The underlying 16,693,500
+samples remain in exact-round-trip quantitative stores. All 67 Python tests, eight
+Node controller tests and Ruff pass with the same viewer code.
+
+The current completed output is
+`outputs/real-data-3d-gps-grid-2026-10-20-viewer-final/index.html`. It is diagnostic only:
+relative raw-GPS placement is approximate, and geographic interpolation, depth
+calibration and soil-property inference are disabled. Full run evidence and commands are in
 [real_data_results.md](real_data_results.md).
