@@ -1,5 +1,10 @@
 # Architecture
 
+The optional `inversion/` adapters conduct explicit gprMax4 CUDA experiments in
+an isolated environment. Volumes select native-waveform ROIs; they are not used
+as electromagnetic observations. Native audits freeze whole-line splits and
+spatial buffers. See [gprmax_experiment.md](gprmax_experiment.md).
+
 Opt-in coherent RMS anomaly detection lives in `volumes/detection.py`. It writes
 full-resolution component labels and auditable slice baselines after reconstruction;
 the viewer only filters those labels. See [volume_detection.md](volume_detection.md).

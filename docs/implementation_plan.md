@@ -383,6 +383,18 @@ do not establish field calibration or interpretation accuracy.
 
 ## Field metadata to collect
 
+## M8 — gprMax4 CUDA inverse-solving experiment (M8a complete; experiments in progress)
+
+Work is isolated on `gprmax`. Milestones cover CUDA verification and native-data
+audit, synthetic/conditional field inverse experiments, and results with whole-line
+holdouts. See [gprmax_experiment.md](gprmax_experiment.md) for scope and limitations.
+Each completed milestone is committed and pushed. Existing radar cubes remain the
+baseline until independent evidence supports an accuracy improvement.
+M8a verified native gprMax 4.0.0 / PyCUDA 2026.1 CUDA execution and audited
+13/16 candidate-region lines, with 8/10 buffered training and 5/6 held-out lines.
+
+## Field metadata to collect (continued)
+
 M7 real-data makeover: complete parent-grid reconstruction now retains crossing
 directions under an explicit combination choice. Window-supported RMS replaces
 whole-trace RMS exclusion by default, with the legacy policy configurable.

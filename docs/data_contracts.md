@@ -1,5 +1,12 @@
 # Data contracts
 
+M8 experimental `observations.json` records the volume selection hash, proposed
+ROI, exact source/profile/trace identities, quality and position status, split,
+buffer exclusions and missing calibration. Companion NPZ files contain native
+recording-time centres and one median signed waveform per retained line. No field
+physical parameter is filled from model assumptions. See
+[gprmax_experiment.md](gprmax_experiment.md).
+
 Optional M7 anomaly artifacts are specified in [volume_detection.md](volume_detection.md):
 `anomaly_labels.npz` contains complete-cell component IDs, and `anomalies.json`
 contains the parent selection hash, scoring parameters, per-slice baselines and
