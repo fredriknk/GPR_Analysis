@@ -383,7 +383,7 @@ do not establish field calibration or interpretation accuracy.
 
 ## Field metadata to collect
 
-## M8 — gprMax4 CUDA inverse-solving experiment (M8a complete; experiments in progress)
+## M8 — gprMax4 CUDA inverse-solving experiment (M8a–M8c implemented)
 
 Work is isolated on `gprmax`. Milestones cover CUDA verification and native-data
 audit, synthetic/conditional field inverse experiments, and results with whole-line
@@ -392,6 +392,19 @@ Each completed milestone is committed and pushed. Existing radar cubes remain th
 baseline until independent evidence supports an accuracy improvement.
 M8a verified native gprMax 4.0.0 / PyCUDA 2026.1 CUDA execution and audited
 13/16 candidate-region lines, with 8/10 buffered training and 5/6 held-out lines.
+
+M8b/M8c completed 2026-10-22: 15 layered CUDA templates with three homogeneous
+references, training-only signed gain/model/shift search, all candidate losses,
+per-line holdout metrics, simple baselines and readable results. A separate 5 mm
+CUDA check and 3D capability smoke run passed. Same-bank synthetic recovery passed;
+the refined-mesh synthetic test selected a different model, documenting parameter
+ambiguity. Both field fits lose to the training-mean baseline; no improved field
+depth/material/volume accuracy is established. Existing cubes remain the baseline.
+Commands, fingerprints, measurements and limitations are in
+[gprmax_experiment.md](gprmax_experiment.md) and [gprmax_results.md](gprmax_results.md).
+Verification: all 109 synthetic Python tests pass after installation; Ruff lint
+and changed-file formatting pass. Ordinary tests require neither CUDA nor private
+data. Completed local CUDA/fit artifacts pass manifest hash verification.
 
 ## Field metadata to collect (continued)
 

@@ -4,6 +4,12 @@ The optional `inversion/` adapters conduct explicit gprMax4 CUDA experiments in
 an isolated environment. Volumes select native-waveform ROIs; they are not used
 as electromagnetic observations. Native audits freeze whole-line splits and
 spatial buffers. See [gprmax_experiment.md](gprmax_experiment.md).
+`inversion/gprmax.py` keeps frozen-version CUDA execution and HDF5 timing behind
+an optional boundary. `inversion/fitting.py` uses NumPy templates and training-only
+model/shift/global-gain selection, with per-line holdout errors and baselines.
+Completed bank/audit/refinement runs are hash-verified and remain immutable.
+Same-bank recovery and refined-mesh sensitivity are reported separately from
+conditional field compatibility; none supplies calibration or replaces a cube.
 
 Opt-in coherent RMS anomaly detection lives in `volumes/detection.py`. It writes
 full-resolution component labels and auditable slice baselines after reconstruction;

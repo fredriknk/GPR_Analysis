@@ -32,6 +32,11 @@ All complementary sensor modules are optional and must accept new sensor types l
 
 ## Start here
 
+- [gprMax CUDA experiment results](docs/gprmax_results.md): bounded template
+  inversion, synthetic mesh sensitivity and conditional native-field holdouts.
+  Field fits lose to the training-mean baseline; no volume accuracy improvement
+  is established. [Reproduction commands](docs/gprmax_experiment.md) remain opt-in.
+
 - [Coherent volume anomaly review](docs/volume_detection.md): full-resolution RMS
   candidate detection and isolated 3D views for the two complete grid locations.
 

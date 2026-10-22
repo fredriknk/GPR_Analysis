@@ -12,10 +12,14 @@ has been published to `main` at `d90c969`.
    demonstrate synthetic recovery, and compare against native field waveforms
    using whole-line training/holdout splits. Record every assumed physical model,
    nuisance adjustment, input hash, CUDA log and candidate loss. Commit and push.
+   Completed 2026-10-22, including mesh sensitivity and synthetic recovery failure
+   under refinement; see [measured results](gprmax_results.md).
 3. **M8c: results.** Report synthetic versus field results, holdout coverage and
    parameter ambiguity. Only call the field volume more accurate if independent
    evidence supports that statement. Preserve current scientific cubes. Commit
    and push results and reproducible commands.
+   Completed 2026-10-22: field templates lose to the training-mean baseline;
+   no material, depth or 3D-volume improvement is supported.
 
 ## Scientific scope
 
@@ -71,5 +75,44 @@ uv pip install --python .spikes/gprmax4/Scripts/python.exe --no-deps -e .
 The isolated environment is pinned in `requirements-gprmax4-win-py311.lock`.
 Runtime evidence remains local: `outputs/gprmax-cuda-smoke/solver-final.log`,
 `smoke.in`, `smoke.h5`, and `outputs/gprmax-observations-001/`. Inputs are
-hash-verified before and after the observation audit. The new bank experiment is
-in progress; no improved field accuracy is claimed at this milestone.
+hash-verified before and after the observation audit. The completed bank contains
+18 CUDA solves (three homogeneous references and 15 layered templates). Homogeneous
+subtraction affects synthetic templates only; native field waveforms remain unchanged.
+
+## Continue or reproduce M8b/M8c
+
+Use fresh output paths and substitute them consistently. Validation needs the
+isolated CUDA environment and MSVC wrapper. Fitting needs the ordinary processing
+environment, with no solver or GPU import. The optional `--validation` additionally
+tests recovery using finer-mesh synthetic observations; omitting it only runs the
+same-bank software recovery and field comparisons.
+
+```powershell
+.\tools\run-gprmax-cuda.ps1 -Script scripts/gprmax_experiment.py validate --input outputs/gprmax-cuda-bank-001 --output outputs/gprmax-cuda-validation-new
+.\.venv\Scripts\python.exe scripts/gprmax_experiment.py fit --input outputs/gprmax-cuda-bank-001 --observations outputs/gprmax-observations-001 --validation outputs/gprmax-cuda-validation-new --output outputs/gprmax-fit-new
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m ruff check .
+```
+
+The fit searches 15 assumed models and shifts from −8 to +30 ns at 0.4 ns spacing.
+One global signed gain is fitted by least squares using equally weighted training
+line medians; only training loss selects the model/shift. All candidates, near ties,
+per-line errors and identities, holdout sample support and two baselines are saved.
+The finite-offset geometric arrival must have a complete additional 12 ns gate
+inside the simulation, its peak must fall in the shifted ROI, interpolation must
+have complete temporal support, and the ROI must contain at least 10% of template
+energy. These are experiment screening choices, not physical time-zero evidence.
+Near ties use best training NMSE + 0.01, not a confidence interval.
+
+`validate` preserves model inputs, HDF5 outputs, CUDA logs and refined truth.
+Its 3D x-polarized capability check reads `Ex`; layered 2D templates read `Ez`.
+Receiver axes use HDF5 `SampleInterval` and `TimeSampleOffset`, not a guessed
+simulation linspace. Both CUDA stages require frozen gprMax 4.0.0 and device 0;
+there is no CPU fallback. The online upstream documentation now describes 4.0.1;
+this experiment retains its verified 4.0.0 lock.
+
+`fit` writes `results.json`, `summary.md` and numerical `*-fit.npz` arrays, with
+hash-verified completed input runs and no overwrite. Mesh validation must bind to
+the same bank hash. Full details, input fingerprints, measured errors and limits
+are in [gprmax_results.md](gprmax_results.md). No production plot assignment,
+source wavelet, calibration or field accuracy has been inferred from the fits.

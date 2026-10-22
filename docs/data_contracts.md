@@ -7,6 +7,21 @@ recording-time centres and one median signed waveform per retained line. No fiel
 physical parameter is filled from model assumptions. See
 [gprmax_experiment.md](gprmax_experiment.md).
 
+M8 `bank.npz` contains receiver `time_ns` and synthetic homogeneous-subtracted
+`signals(model,sample)`; `bank.json` records hypothetical model assumptions and
+row identities. `validation.json` / `refined-truth.npz` retain the separately
+solved mesh comparison, its truth model and CUDA capability check. HDF5 receiver
+sample interval and offset define timing. No synthetic field units are equated
+with ADC counts; a nuisance signed gain bridges the waveform comparison only.
+Final `results.json` records all candidate model/shift/gain/training losses,
+near ties, per-line train/holdout errors, retained traces, baselines and unknown
+field-accuracy status. `*-fit.npz` retains native time, observations, row split
+and prediction; `summary.md` makes the outcome reviewable. MSE units follow
+observations squared; normalized MSE is dimensionless and null for zero observed
+energy. Source/input hashes, configuration and artifact digests are in `run.json`.
+Only training rows choose fitted parameters. Same-bank synthetic inverse-crime
+and finer-mesh recovery flags stay explicit; near ties are not uncertainty bounds.
+
 Optional M7 anomaly artifacts are specified in [volume_detection.md](volume_detection.md):
 `anomaly_labels.npz` contains complete-cell component IDs, and `anomalies.json`
 contains the parent selection hash, scoring parameters, per-slice baselines and
