@@ -405,6 +405,9 @@ Commands, fingerprints, measurements and limitations are in
 Verification: all 109 synthetic Python tests pass after installation; Ruff lint
 and changed-file formatting pass. Ordinary tests require neither CUDA nor private
 data. Completed local CUDA/fit artifacts pass manifest hash verification.
+The `report` stage now exports verified real-data waveform overlays, all-line
+holdout error comparisons and CSV in a separate portable report. Its command and
+scientific limits are recorded in the M8 experiment/results documents.
 
 ## Field metadata to collect (continued)
 

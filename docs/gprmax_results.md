@@ -7,6 +7,16 @@ waveform baseline. There is no evidence here for more accurate field depths,
 permittivity, soil properties or 3D volumes. The existing radar cubes remain the
 baseline. Reproduction commands are in [gprmax_experiment.md](gprmax_experiment.md).
 
+Visual follow-up: `outputs/gprmax-real-data-report-003/index.html` shows both
+field ROIs with all 11 held-out line medians, the training-only gprMax prediction
+and training-mean baseline. Separate grid figures show every held-out waveform;
+`heldout-errors.csv` retains source/profile IDs and per-line RMSE in ADC counts.
+The combined `real-data-comparison.png` is suitable for direct image viewing.
+No source signal or existing fit was changed to make these figures.
+The report's extended synthetic end-to-end check verifies exported artifacts and
+unchanged input manifests. All 109 tests pass in 65.35 s after this addition
+(`outputs/gprmax-report-tests-001.log`); Ruff and changed-file formatting pass.
+
 ## Execution evidence
 
 The frozen gprMax 4.0.0 / PyCUDA 2026.1 environment ran on CUDA device 0, Quadro

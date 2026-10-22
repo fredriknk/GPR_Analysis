@@ -13,6 +13,7 @@ from soil_sensing.ingest import write_json
 from soil_sensing.inversion.fitting import fit_experiment, template_search
 from soil_sensing.inversion.gprmax import layered_input, read_ez
 from soil_sensing.inversion.observations import separated_training_mask
+from soil_sensing.inversion.report import report_experiment
 from soil_sensing.runs import begin_run, finish_run
 
 
@@ -201,6 +202,11 @@ class TemplateTests(unittest.TestCase):
             completed = verify_run(root / "fit")
             self.assertIn("summary.md", completed["artifacts"])
             self.assertIn(str(validation.resolve()), completed["inputs"])
+            rendered = report_experiment(root / "fit", root / "report")
+            report_manifest = verify_run(rendered)
+            self.assertIn("real-data-comparison.png", report_manifest["artifacts"])
+            self.assertIn("heldout-errors.csv", report_manifest["artifacts"])
+            self.assertEqual(verify_run(root / "fit"), completed)
             # A rerun cannot replace results; a corrupted library cannot enter a new fit.
             with self.assertRaises(ValueError):
                 fit_experiment(bank, observations, root / "fit")

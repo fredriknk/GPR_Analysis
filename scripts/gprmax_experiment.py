@@ -5,7 +5,7 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage", choices=["audit", "bank", "fit", "validate"])
+    parser.add_argument("stage", choices=["audit", "bank", "fit", "validate", "report"])
     parser.add_argument("--input")
     parser.add_argument("--output", required=True)
     parser.add_argument("--observations")
@@ -33,6 +33,10 @@ def main():
         from soil_sensing.inversion.gprmax import cuda_validation
 
         cuda_validation(args.input, args.output)
+    elif args.stage == "report":
+        from soil_sensing.inversion.report import report_experiment
+
+        print(report_experiment(args.input, args.output))
     else:
         from soil_sensing.inversion.fitting import fit_experiment
 

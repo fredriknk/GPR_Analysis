@@ -116,3 +116,15 @@ hash-verified completed input runs and no overwrite. Mesh validation must bind t
 the same bank hash. Full details, input fingerprints, measured errors and limits
 are in [gprmax_results.md](gprmax_results.md). No production plot assignment,
 source wavelet, calibration or field accuracy has been inferred from the fits.
+
+To show a completed fit using real field waveforms, generate a separate portable
+report (no solver or refitting):
+
+```powershell
+.\.venv\Scripts\python.exe scripts/gprmax_experiment.py report --input outputs/gprmax-fit-validated-002 --output outputs/gprmax-real-data-report-new
+```
+
+Open the new `index.html` for waveform overlays, errors for every held-out line
+and downloadable CSV. PNGs preserve actual signed ADC counts and native recording
+time, with no display gain. The report verifies its input artifact hashes and
+recomputed displayed errors against stored metrics; it cannot overwrite a run.
